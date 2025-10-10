@@ -57,7 +57,7 @@ export async function getIssuerUrl() {
   const host = headers.get("host");
   const protocol = host?.includes("localhost") ? "http" : "https";
   const { url } = await client.authorize(
-    `${protocol}://${host}/api/auth/callback`,
+    `${protocol}://${host}/api/authorize`,
     "code",
   );
   return url;

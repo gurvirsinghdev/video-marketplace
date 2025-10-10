@@ -55,7 +55,7 @@ const sidebarGroupItems: SidebarGroupItem[] = [
       },
       {
         label: "purchased videos",
-        href: "/dashboard/purchased",
+        href: "/dashboard/purchased-videos",
         icon: FileCheckIcon,
       },
     ],

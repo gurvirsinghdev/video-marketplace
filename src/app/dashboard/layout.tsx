@@ -10,19 +10,21 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { getAuth, getIssuerUrl } from "@/auth/actions";
+import { callTrpcWithFallback, trpc } from "@/trpc/server";
+import { getIssuerUrl, logout } from "@/auth/actions";
 
 import DashboardBreadcrumbs from "../../modules/dashboard/breadcrumbs";
 import DashboardUserAvatar from "../../modules/dashboard/user-avatar";
 import Link from "next/link";
 import SidebarMenu from "../../modules/dashboard/sidebar-menu";
 import { redirect } from "next/navigation";
-import { trpc } from "@/trpc/server";
 
 export default async function DashboardLayout(
   props: Readonly<{ children: React.ReactNode }>,
 ) {
-  const dbUser = await trpc.auth.getAuthenticatedUser();
+  const dbUser = await callTrpcWithFallback(() =>
+    trpc.auth.getAuthenticatedUser(),
+  );
   if (!dbUser) {
     redirect(await getIssuerUrl());
   }
@@ -54,7 +56,8 @@ export default async function DashboardLayout(
             <SidebarMenuItem>
               <SidebarMenuButton
                 tabIndex={-1}
-                className="hover:bg-destructive! py-5!"
+                className="hover:bg-destructive/60! cursor-pointer py-5!"
+                onClick={logout}
               >
                 <LogOutIcon className="size-4 h-4 w-4" />
                 <span>Logout</span>

@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { MenuIcon } from "lucide-react";
 import { getIssuerUrl } from "@/auth/actions";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuthQuery } from "@/hooks/use-auth";
 
 async function redirectToIssuer() {
   const url = await getIssuerUrl();
@@ -23,7 +23,7 @@ async function redirectToIssuer() {
 }
 
 export default function Header() {
-  const auth = useAuth();
+  const authQuery = useAuthQuery();
   const pathname = usePathname();
   const appRoutes: Map<string, string> = new Map([
     ["home", "/"],
@@ -55,7 +55,7 @@ export default function Header() {
           </nav>
 
           <div className="flex flex-row items-center justify-center divide-x">
-            {auth ? (
+            {authQuery.data ? (
               <Link href={"/dashboard"}>
                 <button className="bg-accent dark:bg-card hover:bg-background focus:bg-background cursor-pointer border-l p-8 transition-colors">
                   Dashboard
@@ -107,18 +107,19 @@ export default function Header() {
             </nav>
 
             <div className="flex flex-col gap-2 px-4">
-              {(auth ? ["dashboard"] : ["sign in", "start selling"]).map(
-                (label) => (
-                  <Button
-                    key={label}
-                    onClick={redirectToIssuer}
-                    variant={"outline"}
-                    className="w-full cursor-pointer rounded-none p-5! capitalize"
-                  >
-                    {label}
-                  </Button>
-                ),
-              )}
+              {(authQuery.data
+                ? ["dashboard"]
+                : ["sign in", "start selling"]
+              ).map((label) => (
+                <Button
+                  key={label}
+                  onClick={redirectToIssuer}
+                  variant={"outline"}
+                  className="w-full cursor-pointer rounded-none p-5! capitalize"
+                >
+                  {label}
+                </Button>
+              ))}
             </div>
 
             <SheetFooter />

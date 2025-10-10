@@ -1,7 +1,5 @@
 import { baseProcedure, createTRPCRouter, protectedProcedure } from "../init";
-import { object, string } from "valibot";
 
-import { TRPCError } from "@trpc/server";
 import { db } from "@/db/drizzle";
 import { eq } from "drizzle-orm";
 import { getAuth } from "@/auth/actions";
@@ -24,7 +22,7 @@ export const authRouter = createTRPCRouter({
         .limit(1)
         .execute();
 
-      return dbUser as typeof dbUser | undefined | null;
+      return dbUser;
     }),
   ),
 });

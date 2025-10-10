@@ -3,7 +3,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { UserIcon } from "lucide-react";
 
 interface Props {
-  email: string;
+  displayName: string;
 }
 
 export default function DashboardLogo(props: Props) {
@@ -15,7 +15,7 @@ export default function DashboardLogo(props: Props) {
         </AvatarFallback>
       </Avatar>
       <div className="flex-1">
-        <p className="text-sm font-medium">{props.email.split("@")[0]}</p>
+        <p className="text-sm font-medium">{props.displayName}</p>
       </div>
     </div>
   );

@@ -17,20 +17,23 @@ import DashboardUserAvatar from "../../modules/dashboard/user-avatar";
 import Link from "next/link";
 import SidebarMenu from "../../modules/dashboard/sidebar-menu";
 import { redirect } from "next/navigation";
+import { trpc } from "@/trpc/server";
 
 export default async function DashboardLayout(
   props: Readonly<{ children: React.ReactNode }>,
 ) {
-  const auth = await getAuth();
-  if (!auth) {
-    return redirect(await getIssuerUrl());
+  const dbUser = await trpc.auth.getAuthenticatedUser();
+  if (!dbUser) {
+    redirect(await getIssuerUrl());
   }
 
   return (
     <SidebarProvider className="w-screen">
       <Sidebar className="broder-r">
         <SidebarHeader className="border-b p-4">
-          <DashboardUserAvatar email={auth.properties.email} />
+          <DashboardUserAvatar
+            displayName={dbUser.name ?? dbUser.email.split("@")[0]}
+          />
         </SidebarHeader>
         <SidebarContent className="gap-0">
           <SidebarMenu />

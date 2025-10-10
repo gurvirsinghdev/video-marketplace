@@ -6,6 +6,7 @@ import {
   ControllerRenderProps,
   FieldPath,
   Path,
+  useFormContext,
 } from "react-hook-form";
 import {
   FormControl,
@@ -15,10 +16,11 @@ import {
   FormField as ShadcnFormField,
 } from "@/components/ui/form";
 
+import { useBaseFormContext } from "./form-context";
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 interface Props<TSchema extends BaseSchema<any, any, any>> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  control: Control<InferInput<TSchema>>;
   name: FieldPath<InferInput<TSchema>>;
   render: (
     field: ControllerRenderProps<
@@ -32,9 +34,13 @@ interface Props<TSchema extends BaseSchema<any, any, any>> {
 export default function FormField<TSchema extends BaseSchema<any, any, any>>(
   props: Props<TSchema>,
 ) {
+  const { control } = useFormContext<InferInput<TSchema>>();
+  const { isLoading } = useBaseFormContext();
+
   return (
     <ShadcnFormField
-      control={props.control}
+      disabled={isLoading}
+      control={control}
       name={props.name}
       render={({ field }) => (
         <FormItem>

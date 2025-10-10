@@ -2,6 +2,7 @@ import { baseProcedure, createTRPCRouter } from "../init";
 
 import { TRPCError } from "@trpc/server";
 import { authRouter } from "./auth.router";
+import { userRouter } from "./user.router";
 
 export function pipeThroughTRPCErrorHandler<T extends () => ReturnType<T>>(
   callbackFn: T,
@@ -21,6 +22,7 @@ export function pipeThroughTRPCErrorHandler<T extends () => ReturnType<T>>(
 
 export const appRouter = createTRPCRouter({
   auth: authRouter,
+  user: userRouter,
 });
 
 export type AppRouter = typeof appRouter;

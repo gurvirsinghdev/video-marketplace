@@ -9,7 +9,10 @@ import FormActionButtons from "@/modules/form/action-buttons";
 import FormField from "@/modules/form/field";
 import InputField from "@/modules/form/input-field";
 import React from "react";
+import { redirect } from "next/navigation";
 import { toast } from "sonner";
+import { useMutation } from "@tanstack/react-query";
+import { useTRPC } from "@/trpc/client";
 
 const onboardingSchema = object({
   name: pipe(
@@ -19,6 +22,25 @@ const onboardingSchema = object({
 });
 
 export default function DashboardOnboardingPage() {
+  /**
+   * FIX: Prevent onboarded users from accessing
+   * this page.
+   */
+  const trpc = useTRPC();
+  const finishOnboardingMutation = useMutation(
+    trpc.user.finishOnboarding.mutationOptions({
+      onMutate() {
+        toast.loading("Finishing Onboarding...", { id: "onboarding" });
+      },
+      onError(err) {
+        toast.error(err.message, { id: "onboarding" });
+      },
+      onSuccess() {
+        toast.success("Onboarding Completed!", { id: "onboarding" });
+      },
+    }),
+  );
+
   return (
     <section className="p-4">
       <Dialog
@@ -40,24 +62,22 @@ export default function DashboardOnboardingPage() {
           <BaseForm
             schema={onboardingSchema}
             handlers={{
-              submitForm: (data) => {
-                console.log(data);
+              submitForm: async (data) => {
+                await finishOnboardingMutation.mutateAsync({ name: data.name });
+                redirect("/dashboard");
               },
             }}
-            render={(control) => (
-              <React.Fragment>
-                <FormField<typeof onboardingSchema>
-                  control={control}
-                  name={"name"}
-                  render={(field) => (
-                    <InputField placeholder="Enter your full name" {...field} />
-                  )}
-                />
+            shared={{ isLoading: finishOnboardingMutation.isPending }}
+          >
+            <FormField<typeof onboardingSchema>
+              name="name"
+              render={(field) => (
+                <InputField placeholder="Enter your full name" {...field} />
+              )}
+            />
 
-                <FormActionButtons buttonLabel="Finish Onboarding" />
-              </React.Fragment>
-            )}
-          />
+            <FormActionButtons buttonLabel="Finish Onboarding" />
+          </BaseForm>
         </DialogContent>
       </Dialog>
     </section>

@@ -1,0 +1,1 @@
+ALTER TABLE "vididpro_user" ALTER COLUMN "account_status" SET NOT NULL;

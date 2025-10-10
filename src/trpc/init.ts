@@ -1,20 +1,41 @@
+import { TRPCError, initTRPC } from "@trpc/server";
+
 import SuperJSON from "superjson";
 import { cache } from "react";
 import { getAuth } from "@/auth/actions";
-import { initTRPC } from "@trpc/server";
+import { pipeThroughTRPCErrorHandler } from "./routers/_app";
 
 export const createTRPCContext = cache(async () => {
-  const auth = getAuth();
+  const auth = await getAuth();
   return {
     auth,
   };
 });
-export type TRPCContext = ReturnType<Awaited<typeof createTRPCContext>>;
+export type TRPCContext = Awaited<ReturnType<typeof createTRPCContext>>;
 
 const t = initTRPC.context<TRPCContext>().create({
   transformer: SuperJSON,
 });
 
 export const createTRPCRouter = t.router;
-export const createCallerFactory = t.createCallerFactory;
 export const baseProcedure = t.procedure;
+
+export const protectedProcedure = t.procedure.use(
+  t.middleware(({ ctx, next }) =>
+    pipeThroughTRPCErrorHandler(async () => {
+      if (!ctx.auth) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You are not authorized to access this resource.",
+        });
+      }
+
+      return next({
+        ctx: {
+          ...ctx,
+          auth: ctx.auth!,
+        },
+      });
+    }),
+  ),
+);

@@ -17,9 +17,11 @@ export const userTable = pgTable(
   {
     email: varchar("email").notNull().unique(),
     name: varchar("name"),
-    account_status: userAccountStatus("account_status").default("pending"),
+    account_status: userAccountStatus("account_status")
+      .default("pending")
+      .notNull(),
 
-    created_at: timestamp("created_at").defaultNow(),
+    created_at: timestamp("created_at").defaultNow().notNull(),
     updated_at: timestamp("updated_at").$defaultFn(() => sql`NOW()`),
   },
   (t) => [primaryKey({ columns: [t.email] })],

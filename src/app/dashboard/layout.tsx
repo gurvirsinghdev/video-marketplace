@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/sidebar";
 import { getAuth, getIssuerUrl } from "@/auth/actions";
 
-import { Button } from "@/components/ui/button";
 import DashboardBreadcrumbs from "../modules/dashboard/breadcrumbs";
 import DashboardUserAvatar from "../modules/dashboard/user-avatar";
 import Link from "next/link";
@@ -23,7 +22,6 @@ export default async function DashboardLayout(
   props: Readonly<{ children: React.ReactNode }>,
 ) {
   const auth = await getAuth();
-
   if (!auth) {
     return redirect(await getIssuerUrl());
   }

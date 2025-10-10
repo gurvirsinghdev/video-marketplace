@@ -1,0 +1,1 @@
+ALTER TABLE "vididpro_user" ALTER COLUMN "created_at" SET NOT NULL;

@@ -14,6 +14,14 @@ declare module "sst" {
       "type": "sst.aws.Service"
       "url": string
     }
+    "VididProPostgresDB": {
+      "database": string
+      "host": string
+      "password": string
+      "port": number
+      "type": "sst.aws.Postgres"
+      "username": string
+    }
     "VididProVPC": {
       "type": "sst.aws.Vpc"
     }

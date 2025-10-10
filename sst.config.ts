@@ -33,6 +33,9 @@ export default $config({
       },
     });
 
+    /**
+     * Setting up an OpenAuth Issuer server
+     */
     const auth = new sst.aws.Auth("VidIDProAuthServer", {
       issuer: {
         handler: "openauth/index.handler",
@@ -42,24 +45,41 @@ export default $config({
         },
       },
       domain: {
-        name: "issuer.yoursite.live",
+        name: "auth.yoursite.live",
         dns: sst.cloudflare.dns(),
       },
     });
+
     /**
      * Creates an ECS cluster within the VPC to run containerized app.
      */
     const appCluster = new sst.aws.Cluster("VididProApplicationCluster", {
       vpc: vpc,
     });
+
+    /**
+     * Setting up a relational PostgresSQL database to store data.
+     */
+    const db = new sst.aws.Postgres("VididProPostgresDB", {
+      vpc: vpc,
+      database: "vididpro_db",
+      dev: {
+        host: "localhost",
+        port: 5432,
+        username: "admin",
+        password: "password",
+        database: "vididpro_db",
+      },
+    });
+
     /**
      * Creates a service within the ECS Cluster to run the containerized
      * Next.js application.
      */
-    const appService = new sst.aws.Service("VididProApplicationService", {
+    new sst.aws.Service("VididProApplicationService", {
       cluster: appCluster,
       architecture: "arm64",
-      link: [auth],
+      link: [auth, db],
       loadBalancer: {
         domain: {
           name: "yoursite.live",

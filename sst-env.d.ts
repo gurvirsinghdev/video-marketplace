@@ -5,6 +5,10 @@
 
 declare module "sst" {
   export interface Resource {
+    "VidIDProAuthServer": {
+      "type": "sst.aws.Auth"
+      "url": string
+    }
     "VididProApplicationService": {
       "service": string
       "type": "sst.aws.Service"

@@ -1,9 +1,5 @@
 "use client";
-import Link from "next/link";
-import AppLogo from "./app-logo";
-import { usePathname } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { MenuIcon } from "lucide-react";
+
 import {
   Sheet,
   SheetContent,
@@ -12,6 +8,12 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+
+import AppLogo from "./app-logo";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { MenuIcon } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 export default function Header() {
   const pathname = usePathname();
@@ -84,6 +86,22 @@ export default function Header() {
                 </Link>
               ))}
             </nav>
+
+            <div className="flex flex-col gap-2 px-4">
+              {[
+                ["sign in", "/signin"],
+                ["start selling", "/signup"],
+              ].map(([label, href]) => (
+                <Link href={href} key={href}>
+                  <Button
+                    variant={"outline"}
+                    className="w-full cursor-pointer rounded-none p-5! capitalize"
+                  >
+                    {label}
+                  </Button>
+                </Link>
+              ))}
+            </div>
 
             <SheetFooter />
           </SheetContent>

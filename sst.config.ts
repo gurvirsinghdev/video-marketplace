@@ -1,7 +1,7 @@
 // eslint-disable-next-line @typescript-eslint/triple-slash-reference
 /// <reference path="./.sst/platform/config.d.ts" />
 export default $config({
-  app(input) {
+  app() {
     return {
       name: "vididpro",
       removal: "remove",
@@ -33,26 +33,46 @@ export default $config({
       },
     });
 
+    const auth = new sst.aws.Auth("VidIDProAuthServer", {
+      issuer: {
+        handler: "openauth/index.handler",
+        environment: {
+          MAILGUN_DOMAIN: process.env.MAILGUN_DOMAIN!,
+          MAILGUN_SENDING_KEY: process.env.MAILGUN_SENDING_KEY!,
+        },
+      },
+      domain: {
+        name: "issuer.yoursite.live",
+        dns: sst.cloudflare.dns(),
+      },
+    });
     /**
      * Creates an ECS cluster within the VPC to run containerized app.
      */
     const appCluster = new sst.aws.Cluster("VididProApplicationCluster", {
       vpc: vpc,
     });
-
+    /**
+     * Creates a service within the ECS Cluster to run the containerized
+     * Next.js application.
+     */
     const appService = new sst.aws.Service("VididProApplicationService", {
       cluster: appCluster,
       architecture: "arm64",
+      link: [auth],
       loadBalancer: {
-        ports: [{ listen: "80/http", forward: "3000/http" }],
+        domain: {
+          name: "yoursite.live",
+          dns: sst.cloudflare.dns(),
+        },
+        ports: [
+          { listen: "80/http", redirect: "443/https" },
+          { listen: "443/https", forward: "3000/http" },
+        ],
       },
       dev: {
         command: "pnpm dev",
       },
     });
-
-    return {
-      appUrl: appService.url,
-    };
   },
 });

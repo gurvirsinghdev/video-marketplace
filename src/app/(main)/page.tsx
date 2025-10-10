@@ -1,5 +1,3 @@
-import Image from "next/image";
-
-export default function HomePage() {
+export default async function HomePage() {
   return <p>Home Page</p>;
 }

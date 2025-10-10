@@ -17,7 +17,8 @@ COPY . .
 COPY docker.env ./.env
 
 # Building the project.
-RUN pnpm build
+RUN --mount=type=secret,id=SST_RESOURCE_VidIDProAuthServer,env=SST_RESOURCE_VidIDProAuthServer \
+  pnpm build
 
 
 # Stage 2: Starting the webserver.

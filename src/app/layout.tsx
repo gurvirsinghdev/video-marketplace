@@ -5,6 +5,7 @@ import { DM_Mono, DM_Sans } from "next/font/google";
 import type { Metadata } from "next";
 import NextThemesProvider from "@/providers/next-themes-provider";
 import { TRPCReactProvider } from "@/trpc/client";
+import { Toaster } from "@/components/ui/sonner";
 
 const sansFont = DM_Sans({
   subsets: ["latin"],
@@ -34,7 +35,10 @@ export default function RootLayout({
         <body
           className={`${sansFont.variable} ${monoFont.variable} antialiased`}
         >
-          <NextThemesProvider>{children}</NextThemesProvider>
+          <NextThemesProvider>
+            {children}
+            <Toaster richColors />
+          </NextThemesProvider>
         </body>
       </html>
     </TRPCReactProvider>

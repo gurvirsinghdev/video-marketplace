@@ -12,10 +12,10 @@ import {
 } from "@/components/ui/sidebar";
 import { getAuth, getIssuerUrl } from "@/auth/actions";
 
-import DashboardBreadcrumbs from "../modules/dashboard/breadcrumbs";
-import DashboardUserAvatar from "../modules/dashboard/user-avatar";
+import DashboardBreadcrumbs from "../../modules/dashboard/breadcrumbs";
+import DashboardUserAvatar from "../../modules/dashboard/user-avatar";
 import Link from "next/link";
-import SidebarMenu from "../modules/dashboard/sidebar-menu";
+import SidebarMenu from "../../modules/dashboard/sidebar-menu";
 import { redirect } from "next/navigation";
 
 export default async function DashboardLayout(

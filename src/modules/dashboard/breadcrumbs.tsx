@@ -22,7 +22,7 @@ export default function DashboardBreadcrumbs() {
           <React.Fragment key={idx}>
             <BreadcrumbItem>
               <BreadcrumbLink href={path} className="capitalize">
-                {path.replace(/-/gm, " ")}
+                {path.replace(/-+/gm, " ")}
               </BreadcrumbLink>
             </BreadcrumbItem>
             {idx !== items.length - 1 && <BreadcrumbSeparator />}

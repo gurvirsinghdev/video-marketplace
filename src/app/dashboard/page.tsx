@@ -3,7 +3,7 @@ import { logout } from "@/auth/actions";
 
 export default function DashboardPage() {
   return (
-    <main className="grid h-screen w-screen place-items-center">
+    <main className="grid h-full w-full place-items-center">
       {" "}
       <p>
         <Button onClick={logout} variant={"destructive"}>

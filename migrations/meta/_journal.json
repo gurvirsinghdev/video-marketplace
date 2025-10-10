@@ -15,6 +15,13 @@
       "when": 1760085526727,
       "tag": "0001_clumsy_black_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1760092505663,
+      "tag": "0002_violet_tattoo",
+      "breakpoints": true
     }
   ]
 }

@@ -8,14 +8,22 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { redirect, usePathname } from "next/navigation";
 
 import AppLogo from "./app-logo";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { MenuIcon } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { getIssuerUrl } from "@/auth/actions";
+import { useAuth } from "@/hooks/use-auth";
+
+async function redirectToIssuer() {
+  const url = await getIssuerUrl();
+  redirect(url);
+}
 
 export default function Header() {
+  const auth = useAuth();
   const pathname = usePathname();
   const appRoutes: Map<string, string> = new Map([
     ["home", "/"],
@@ -47,17 +55,28 @@ export default function Header() {
           </nav>
 
           <div className="flex flex-row items-center justify-center divide-x">
-            {/* TODO: Change Action Buttons based off Auth */}
-            <Link href={"/signin"}>
-              <button className="bg-accent dark:bg-card hover:bg-background focus:bg-background cursor-pointer border-l p-8 transition-colors">
-                Sign In
-              </button>
-            </Link>
-            <Link href={"/signup"}>
-              <button className="bg-accent dark:bg-card hover:bg-background focus:bg-background cursor-pointer border-l p-8 transition-colors">
-                Start Selling
-              </button>
-            </Link>
+            {auth ? (
+              <Link href={"/dashboard"}>
+                <button className="bg-accent dark:bg-card hover:bg-background focus:bg-background cursor-pointer border-l p-8 transition-colors">
+                  Dashboard
+                </button>
+              </Link>
+            ) : (
+              <>
+                <button
+                  onClick={redirectToIssuer}
+                  className="bg-accent dark:bg-card hover:bg-background focus:bg-background cursor-pointer border-l p-8 transition-colors"
+                >
+                  Sign In
+                </button>
+                <button
+                  onClick={redirectToIssuer}
+                  className="bg-accent dark:bg-card hover:bg-background focus:bg-background cursor-pointer border-l p-8 transition-colors"
+                >
+                  Start Selling
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -88,19 +107,18 @@ export default function Header() {
             </nav>
 
             <div className="flex flex-col gap-2 px-4">
-              {[
-                ["sign in", "/signin"],
-                ["start selling", "/signup"],
-              ].map(([label, href]) => (
-                <Link href={href} key={href}>
+              {(auth ? ["dashboard"] : ["sign in", "start selling"]).map(
+                (label) => (
                   <Button
+                    key={label}
+                    onClick={redirectToIssuer}
                     variant={"outline"}
                     className="w-full cursor-pointer rounded-none p-5! capitalize"
                   >
                     {label}
                   </Button>
-                </Link>
-              ))}
+                ),
+              )}
             </div>
 
             <SheetFooter />

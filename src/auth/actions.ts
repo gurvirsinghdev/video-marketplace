@@ -1,3 +1,5 @@
+"use server";
+
 import {
   accessCookieName,
   client,
@@ -55,7 +57,7 @@ export async function getIssuerUrl() {
   const host = headers.get("host");
   const protocol = host?.includes("localhost") ? "http" : "https";
   const { url } = await client.authorize(
-    `${protocol}://${host}/api/callback`,
+    `${protocol}://${host}/api/auth/callback`,
     "code",
   );
   return url;

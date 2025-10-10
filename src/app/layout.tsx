@@ -1,8 +1,10 @@
-import { subscribe } from "diagnostics_channel";
 import "./globals.css";
+
+import { DM_Mono, DM_Sans } from "next/font/google";
+
 import type { Metadata } from "next";
-import { DM_Sans, DM_Mono } from "next/font/google";
 import NextThemesProvider from "@/providers/next-themes-provider";
+import { TRPCReactProvider } from "@/trpc/client";
 
 const sansFont = DM_Sans({
   subsets: ["latin"],
@@ -27,10 +29,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${sansFont.variable} ${monoFont.variable} antialiased`}>
-        <NextThemesProvider>{children}</NextThemesProvider>
-      </body>
-    </html>
+    <TRPCReactProvider>
+      <html lang="en" suppressHydrationWarning>
+        <body
+          className={`${sansFont.variable} ${monoFont.variable} antialiased`}
+        >
+          <NextThemesProvider>{children}</NextThemesProvider>
+        </body>
+      </html>
+    </TRPCReactProvider>
   );
 }

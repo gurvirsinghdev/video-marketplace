@@ -21,7 +21,6 @@ export const CountryCodeToNameMap = new Map<string, string>([
   ["GR", "Greece"],
   ["HK", "Hong Kong"],
   ["HU", "Hungary"],
-  ["IN", "India"],
   ["ID", "Indonesia"],
   ["IE", "Ireland"],
   ["IT", "Italy"],

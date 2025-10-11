@@ -28,7 +28,7 @@ export default async function DashboardLayout(
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <SidebarProvider className="w-screen">
+      <SidebarProvider className="w-full overflow-x-hidden">
         <Sidebar className="broder-r">
           <SidebarHeader className="border-b p-4">
             <Suspense
@@ -68,7 +68,7 @@ export default async function DashboardLayout(
         </Sidebar>
 
         {/* Dashboard Content */}
-        <section className="flex min-h-screen w-full max-w-screen flex-col">
+        <section className="flex h-auto min-h-screen w-full flex-col">
           <header className="bg-card flex h-16 items-center justify-between border-b px-4 py-8">
             <SidebarTrigger />
             <DashboardBreadcrumbs />

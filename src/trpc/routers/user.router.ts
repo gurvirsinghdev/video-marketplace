@@ -1,12 +1,20 @@
 import { and, eq } from "drizzle-orm";
+import {
+  createStripeMerchantAccount,
+  extendBaseCreateCorePayload,
+  getConnectedAccountUsingId,
+} from "@/sdk/stripe/accounts";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { enum_, minLength, object, pipe, string } from "valibot";
 import { integrationTable, userTable } from "@/db/schemas/app.schema";
 
 import { CountryCodeEnum } from "@/config/stripe.config";
+import Stripe from "stripe";
 import { TRPCError } from "@trpc/server";
 import { db } from "@/db/drizzle";
 import { pipeThroughTRPCErrorHandler } from "./_app";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export const userRouter = createTRPCRouter({
   finishOnboarding: protectedProcedure
@@ -99,6 +107,9 @@ export const userRouter = createTRPCRouter({
         .limit(1)
         .execute();
 
+      let metadata: { onboarded: boolean; account_id: string } | undefined =
+        undefined;
+
       if (!integration) {
         const [dbUser] = await db
           .select()
@@ -114,55 +125,131 @@ export const userRouter = createTRPCRouter({
           });
         }
 
-        const request = await fetch("https://api.stripe.com/v2/core/accounts", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY!}`,
-            "Stripe-Version": "2025-09-30.preview",
-          },
-          body: JSON.stringify({
-            contact_email: ctx.auth.properties.email,
-            display_name: dbUser.name,
-            dashboard: "full",
-            defaults: {
-              currency: "usd",
-              locales: ["en-US"],
-              responsibilities: {
-                fees_collector: "application",
-                losses_collector: "stripe",
-              },
-            },
+        const { id } = await createStripeMerchantAccount(
+          extendBaseCreateCorePayload({
+            contact_email: dbUser.email,
+            display_name: dbUser.name!,
             identity: {
               business_details: {
-                registered_name: dbUser.registered_name,
+                registered_name: dbUser.registered_name!,
               },
-              country: dbUser.country,
-              entity_type: dbUser.account_type,
+              country: dbUser.country!,
+              entity_type: dbUser.account_type!,
             },
-            include: [
-              "configuration.customer",
-              "configuration.merchant",
-              "identity",
-              "requirements",
-            ],
           }),
-        });
+        );
+
+        metadata = {
+          account_id: id,
+          onboarded: false,
+        };
         await db
           .insert(integrationTable)
           .values({
             user_email: ctx.auth.properties.email,
-            active: true,
+            active: false,
             service: "stripe",
+            metadata,
           })
           .execute();
       } else {
+        metadata = integration.metadata as
+          | {
+              onboarded: boolean;
+              account_id: string;
+            }
+          | undefined;
+
+        await db
+          .update(integrationTable)
+          .set({
+            active: metadata?.onboarded,
+            updated_at: new Date(),
+          })
+          .where(eq(integrationTable.id, integration.id))
+          .execute();
+      }
+
+      if (!metadata?.onboarded) {
+        const accountSession = await stripe.accountSessions.create({
+          account: metadata!.account_id,
+          components: {
+            account_onboarding: {
+              enabled: true,
+            },
+          },
+        });
+
+        return {
+          onboarded: false,
+          public_client_secret: accountSession.client_secret,
+        };
+      }
+
+      return {
+        onboarded: true,
+        public_client_secret: null,
+      };
+    }),
+  ),
+
+  syncStripeAccountStatus: protectedProcedure.mutation(({ ctx }) =>
+    pipeThroughTRPCErrorHandler(async () => {
+      const [stripeIntegration] = await db
+        .select()
+        .from(integrationTable)
+        .where(
+          and(
+            eq(integrationTable.user_email, ctx.auth.properties.email),
+            eq(integrationTable.service, "stripe"),
+          ),
+        )
+        .execute();
+
+      if (!stripeIntegration) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Please enable the Stripe integration from your dashboard.",
+        });
+      }
+
+      const metadata = stripeIntegration.metadata as {
+        account_id: string;
+        onboarded: boolean;
+      };
+      if (!metadata || !metadata.account_id) {
+        await db
+          .delete(integrationTable)
+          .where(eq(integrationTable.id, stripeIntegration.id))
+          .execute();
+
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message:
+            "Unable to link Stripe account. Please try reconnecting from the dashboard.",
+        });
+      }
+
+      const connectedAccount = await getConnectedAccountUsingId(
+        metadata.account_id,
+      );
+
+      if (
+        connectedAccount.configuration.merchant.card_payments.status !==
+        "active"
+      ) {
         await db
           .update(integrationTable)
           .set({
             active: true,
-            updated_at: new Date(),
+            metadata: {
+              ...metadata,
+              onboarded: true,
+              card_payments:
+                connectedAccount.configuration.merchant.card_payments,
+            },
           })
-          .where(eq(integrationTable.id, integration.id))
+          .where(eq(integrationTable.id, stripeIntegration.id))
           .execute();
       }
     }),

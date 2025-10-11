@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/card";
 import { CountryCodeEnum, CountryCodeToNameMap } from "@/config/stripe.config";
 import { enum_, minLength, object, pipe, string } from "valibot";
+import { useCallback, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import BaseForm from "@/modules/form/base-form";
@@ -21,17 +22,24 @@ import { Loader2Icon } from "lucide-react";
 import SelectInputField from "@/modules/form/select-input";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import { useTRPC } from "@/trpc/client";
+
+const EmbeddedAccountsOnboarding = dynamic(
+  async () =>
+    (await import("@/modules/stripe/embedded-accounts-onboarding")).default,
+  { ssr: false },
+);
 
 const accountSchema = object({
   name: pipe(
     string("You must enter your full name."),
-    minLength(3, "Name must be atleast 3 characters long."),
+    minLength(3, "Name must be at least 3 characters long."),
   ),
   registered_name: pipe(
     string("You must enter your full name"),
-    minLength(3, "Name must be atleast 3 characters long."),
+    minLength(3, "Name must be at least 3 characters long."),
   ),
   account_type: enum_(
     (["company", "government_entity", "individual", "non_profit"] as const)
@@ -44,12 +52,17 @@ const accountSchema = object({
 export default function DashboardSettingPage() {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
+
   const authenticatedUserQuery = useQuery(
     trpc.auth.getAuthenticatedUser.queryOptions(),
   );
   const getLinkedServicesQuery = useQuery(
     trpc.user.getLinkedServices.queryOptions(),
   );
+
+  const [stripePublicClientSecret, setStripePublicClientSecret] = useState<
+    string | null
+  >(null);
 
   const enabledServices = (getLinkedServicesQuery.data ?? [])
     .filter((service) => service.active)
@@ -86,9 +99,26 @@ export default function DashboardSettingPage() {
       onError(err) {
         toast.error(err.message, { id: "stripe" });
       },
+      onSuccess(data) {
+        if (!data.onboarded) {
+          toast.dismiss("stripe");
+          setStripePublicClientSecret(data.public_client_secret);
+        } else {
+          getLinkedServicesQuery.refetch();
+          toast.success("Stripe Linked!", { id: "stripe" });
+        }
+      },
+    }),
+  );
+
+  const syncStripeAccountStatusMutation = useMutation(
+    trpc.user.syncStripeAccountStatus.mutationOptions({
+      onError(err) {
+        toast.error(err.message, { id: "sync-stripe" });
+      },
       onSuccess() {
-        toast.success("Stripe Linked!", { id: "stripe" });
         getLinkedServicesQuery.refetch();
+        toast.success("Stripe Linked!", { id: "stripe" });
       },
     }),
   );
@@ -129,6 +159,7 @@ export default function DashboardSettingPage() {
       <Separator />
 
       <div className="divide-y">
+        {/* Account Info Section */}
         <div className="flex flex-col gap-4 py-10 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-[18rem] space-y-1">
             <h2 className="text-lg font-medium">Profile</h2>
@@ -137,7 +168,7 @@ export default function DashboardSettingPage() {
             </p>
           </div>
 
-          <div className="w-full xl:max-w-xl">
+          <div className="w-full max-w-screen xl:max-w-xl">
             {!authenticatedUserQuery.data ? (
               <Loader2Icon className="size-4 h-4 w-4 animate-spin" />
             ) : (
@@ -213,13 +244,13 @@ export default function DashboardSettingPage() {
                   )}
                 />
 
-                {/* TODO: Add a message for unsaved changes.  */}
                 <FormActionButtons buttonLabel="Save" />
               </BaseForm>
             )}
           </div>
         </div>
 
+        {/* Stripe Integration Section */}
         <div className="flex flex-col gap-4 py-10">
           <div className="min-w-[18rem] space-y-1">
             <h2 className="text-lg font-medium">Integrations</h2>
@@ -271,6 +302,16 @@ export default function DashboardSettingPage() {
           </div>
         </div>
       </div>
+      {stripePublicClientSecret && (
+        <EmbeddedAccountsOnboarding
+          clientSecret={stripePublicClientSecret}
+          open={!!stripePublicClientSecret}
+          onExit={() => {
+            syncStripeAccountStatusMutation.mutate();
+            setStripePublicClientSecret(null);
+          }}
+        />
+      )}
     </section>
   );
 }

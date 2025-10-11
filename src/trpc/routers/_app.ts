@@ -1,7 +1,6 @@
-import { baseProcedure, createTRPCRouter } from "../init";
-
 import { TRPCError } from "@trpc/server";
 import { authRouter } from "./auth.router";
+import { createTRPCRouter } from "../init";
 import { userRouter } from "./user.router";
 
 export function pipeThroughTRPCErrorHandler<T extends () => ReturnType<T>>(

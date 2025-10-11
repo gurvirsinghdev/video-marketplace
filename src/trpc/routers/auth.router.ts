@@ -22,7 +22,7 @@ export const authRouter = createTRPCRouter({
         .limit(1)
         .execute();
 
-      return dbUser;
+      return dbUser ?? null;
     }),
   ),
 });

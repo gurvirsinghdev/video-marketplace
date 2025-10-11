@@ -5,7 +5,7 @@ export default async function ProtectedDashboardLayout(
   props: Readonly<{ children: React.ReactNode }>,
 ) {
   const dbUser = await caller.auth.getAuthenticatedUser();
-  if (dbUser.account_status !== "fulfilled") {
+  if (dbUser?.account_status !== "fulfilled") {
     redirect("/dashboard/onboarding");
   }
 

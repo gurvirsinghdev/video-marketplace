@@ -37,7 +37,7 @@ export default function RootLayout({
         >
           <NextThemesProvider>
             {children}
-            <Toaster richColors />
+            <Toaster richColors toastOptions={{ className: "font-sans!" }} />
           </NextThemesProvider>
         </body>
       </html>

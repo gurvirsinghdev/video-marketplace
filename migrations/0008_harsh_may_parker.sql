@@ -1,0 +1,1 @@
+ALTER TABLE "vididpro_integration" ADD COLUMN "active" boolean DEFAULT false NOT NULL;

@@ -1,3 +1,4 @@
+import { FormControl } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
@@ -14,13 +15,15 @@ export default function InputField({
   ...props
 }: Props) {
   return (
-    <Input
-      disabled={disabled}
-      className={cn(
-        "border-border bg-background text-foreground placeholder:text-muted-foreground",
-        className,
-      )}
-      {...props}
-    />
+    <FormControl>
+      <Input
+        disabled={disabled}
+        className={cn(
+          "border-border bg-background text-foreground placeholder:text-muted-foreground",
+          className,
+        )}
+        {...props}
+      />
+    </FormControl>
   );
 }

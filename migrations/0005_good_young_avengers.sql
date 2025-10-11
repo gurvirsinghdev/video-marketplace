@@ -1,0 +1,1 @@
+ALTER TABLE "vididpro_user" ADD COLUMN "stripe_account_id" text;

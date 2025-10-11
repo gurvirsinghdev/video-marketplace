@@ -11,15 +11,14 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { callTrpcWithFallback, getQueryClient, trpc } from "@/trpc/server";
-import { getIssuerUrl, logout } from "@/auth/actions";
+import { getQueryClient, trpc } from "@/trpc/server";
 
 import DashboardBreadcrumbs from "../../modules/dashboard/breadcrumbs";
 import DashboardUserAvatar from "../../modules/dashboard/user-avatar";
 import Link from "next/link";
 import SidebarMenu from "../../modules/dashboard/sidebar-menu";
 import { Suspense } from "react";
-import { redirect } from "next/navigation";
+import { logout } from "@/auth/actions";
 
 export default async function DashboardLayout(
   props: Readonly<{ children: React.ReactNode }>,

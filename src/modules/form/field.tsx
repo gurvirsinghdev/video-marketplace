@@ -1,15 +1,13 @@
 "use client";
 
-import { BaseSchema, InferInput, InferOutput } from "valibot";
+import { BaseSchema, InferInput } from "valibot";
 import {
-  Control,
   ControllerRenderProps,
   FieldPath,
   Path,
   useFormContext,
 } from "react-hook-form";
 import {
-  FormControl,
   FormItem,
   FormLabel,
   FormMessage,
@@ -18,15 +16,19 @@ import {
 
 import { useBaseFormContext } from "./form-context";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-interface Props<TSchema extends BaseSchema<any, any, any>> {
+interface Props<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  name: FieldPath<InferInput<TSchema>>;
+  TSchema extends BaseSchema<any, any, any>,
+  TName = FieldPath<InferInput<TSchema>>,
+> {
+  name: TName;
   render: (
-    field: ControllerRenderProps<
-      InferInput<TSchema>,
-      Path<InferInput<TSchema>>
+    field: Omit<
+      ControllerRenderProps<InferInput<TSchema>, Path<InferInput<TSchema>>>,
+      "value"
     >,
+    // @ts-expect-error TName is valid index, as InferInput<TSchema> is equivalent to Record<string, string>
+    value: InferInput<TSchema>[TName],
   ) => React.ReactNode;
 }
 
@@ -42,12 +44,12 @@ export default function FormField<TSchema extends BaseSchema<any, any, any>>(
       disabled={isLoading}
       control={control}
       name={props.name}
-      render={({ field }) => (
+      render={({ field: { value, ...field } }) => (
         <FormItem>
           <FormLabel className="text-foreground capitalize">
-            {props.name.replace(/-+/gm, " ")}
+            {props.name.replace(/_+/gm, " ")}
           </FormLabel>
-          <FormControl>{props.render(field)}</FormControl>
+          {props.render(field, value)}
           <FormMessage />
         </FormItem>
       )}

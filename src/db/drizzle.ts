@@ -1,5 +1,4 @@
-import { Pool, Result } from "pg";
-
+import { Pool } from "pg";
 import { Resource } from "sst";
 import { drizzle } from "drizzle-orm/node-postgres";
 

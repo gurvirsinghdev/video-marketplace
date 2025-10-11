@@ -1,7 +1,9 @@
 "use client";
 
+import { CountryCodeEnum, CountryCodeToNameMap } from "@/config/stripe.config";
 import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
-import { minLength, object, pipe, string } from "valibot";
+import { enum_, minLength, object, pipe, string } from "valibot";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import BaseForm from "@/modules/form/base-form";
 import DashboardDialogHeader from "@/modules/dashboard/dialog-header";
@@ -9,9 +11,9 @@ import FormActionButtons from "@/modules/form/action-buttons";
 import FormField from "@/modules/form/field";
 import InputField from "@/modules/form/input-field";
 import React from "react";
+import SelectInputField from "@/modules/form/select-input";
 import { redirect } from "next/navigation";
 import { toast } from "sonner";
-import { useMutation } from "@tanstack/react-query";
 import { useTRPC } from "@/trpc/client";
 
 const onboardingSchema = object({
@@ -19,6 +21,16 @@ const onboardingSchema = object({
     string("You must enter your full name."),
     minLength(3, "Name must be atleast 3 characters long."),
   ),
+  registered_name: pipe(
+    string("You must enter your full name"),
+    minLength(3, "Name must be atleast 3 characters long."),
+  ),
+  account_type: enum_(
+    (["company", "government_entity", "individual", "non_profit"] as const)
+      .map((value) => ({ [value]: value }))
+      .reduce((acc, current) => ({ ...acc, ...current }), {}),
+  ),
+  country: CountryCodeEnum,
 });
 
 export default function DashboardOnboardingPage() {
@@ -27,6 +39,8 @@ export default function DashboardOnboardingPage() {
    * this page.
    */
   const trpc = useTRPC();
+  const queryClient = useQueryClient();
+
   const finishOnboardingMutation = useMutation(
     trpc.user.finishOnboarding.mutationOptions({
       onMutate() {
@@ -37,6 +51,9 @@ export default function DashboardOnboardingPage() {
       },
       onSuccess() {
         toast.success("Onboarding Completed!", { id: "onboarding" });
+        queryClient.invalidateQueries(
+          trpc.auth.getAuthenticatedUser.queryOptions(),
+        );
       },
     }),
   );
@@ -63,7 +80,12 @@ export default function DashboardOnboardingPage() {
             schema={onboardingSchema}
             handlers={{
               submitForm: async (data) => {
-                await finishOnboardingMutation.mutateAsync({ name: data.name });
+                await finishOnboardingMutation.mutateAsync({
+                  name: data.name,
+                  account_type: data.account_type,
+                  country: data.country,
+                  registered_name: data.registered_name,
+                });
                 redirect("/dashboard");
               },
             }}
@@ -73,6 +95,42 @@ export default function DashboardOnboardingPage() {
               name="name"
               render={(field) => (
                 <InputField placeholder="Enter your full name" {...field} />
+              )}
+            />
+            <FormField<typeof onboardingSchema>
+              name="registered_name"
+              render={(field) => (
+                <InputField
+                  placeholder="Enter your registered name"
+                  {...field}
+                />
+              )}
+            />
+            <FormField<typeof onboardingSchema>
+              name="country"
+              render={(field) => (
+                <SelectInputField
+                  onValueChange={field.onChange}
+                  values={Array.from(CountryCodeToNameMap)}
+                  placeholder="Choose Your Country"
+                  {...field}
+                />
+              )}
+            />
+            <FormField<typeof onboardingSchema>
+              name="account_type"
+              render={(field) => (
+                <SelectInputField
+                  onValueChange={field.onChange}
+                  values={Array.from([
+                    ["company", "company"],
+                    ["government_entity", "government_entity"],
+                    ["individual", "individual"],
+                    ["non_profit", "non_profit"],
+                  ])}
+                  placeholder="Choose Account Type"
+                  {...field}
+                />
               )}
             />
 

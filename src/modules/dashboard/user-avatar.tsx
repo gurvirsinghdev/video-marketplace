@@ -21,7 +21,8 @@ export default function DashboardLogo() {
       </Avatar>
       <div className="flex-1">
         <p className="text-sm font-medium">
-          {dbUserQuery.data.name ?? dbUserQuery.data.email.split("@")[0]}
+          {dbUserQuery.data.registered_name ??
+            dbUserQuery.data.email.split("@")[0]}
         </p>
       </div>
     </div>

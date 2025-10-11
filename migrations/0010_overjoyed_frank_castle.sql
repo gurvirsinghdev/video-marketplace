@@ -1,0 +1,1 @@
+ALTER TABLE "vididpro_integration" ALTER COLUMN "service" SET NOT NULL;

@@ -28,4 +28,23 @@ export const userRouter = createTRPCRouter({
           .execute();
       }),
     ),
+
+  updateFullName: protectedProcedure
+    .input(
+      object({
+        name: pipe(
+          string("You must eneter the full name."),
+          minLength(3, "Full name must be atleast 3 characters long."),
+        ),
+      }),
+    )
+    .mutation(({ input, ctx }) =>
+      pipeThroughTRPCErrorHandler(async () => {
+        await db
+          .update(userTable)
+          .set({ name: input.name })
+          .where(eq(userTable.email, ctx.auth.properties.email))
+          .execute();
+      }),
+    ),
 });

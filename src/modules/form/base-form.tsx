@@ -32,9 +32,9 @@ export default function BaseForm<TSchema extends BaseSchema<any, any, any>>(
 
   return (
     <Form {...form}>
-      <BaseFormProvider value={props.shared}>
+      <BaseFormProvider value={props.shared ?? {}}>
         <form
-          className={cn(props.className)}
+          className={cn("w-full", props.className)}
           onSubmit={form.handleSubmit((data) =>
             props.handlers.submitForm(data, form),
           )}

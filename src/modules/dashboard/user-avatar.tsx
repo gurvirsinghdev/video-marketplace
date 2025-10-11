@@ -1,12 +1,17 @@
+"use client";
+
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 import { UserIcon } from "lucide-react";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { useTRPC } from "@/trpc/client";
 
-interface Props {
-  displayName: string;
-}
+export default function DashboardLogo() {
+  const trpc = useTRPC();
+  const dbUserQuery = useSuspenseQuery(
+    trpc.auth.getAuthenticatedUser.queryOptions(),
+  );
 
-export default function DashboardLogo(props: Props) {
   return (
     <div className="flex items-center space-x-3">
       <Avatar className="size-8 h-8 w-8">
@@ -15,7 +20,9 @@ export default function DashboardLogo(props: Props) {
         </AvatarFallback>
       </Avatar>
       <div className="flex-1">
-        <p className="text-sm font-medium">{props.displayName}</p>
+        <p className="text-sm font-medium">
+          {dbUserQuery.data.name ?? dbUserQuery.data.email.split("@")[0]}
+        </p>
       </div>
     </div>
   );

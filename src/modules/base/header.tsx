@@ -83,7 +83,11 @@ export default function Header() {
         {/* Mobile Navigation */}
         <Sheet>
           <SheetTrigger asChild className="block lg:hidden">
-            <Button variant={"ghost"} size={"icon"}>
+            <Button
+              variant={"ghost"}
+              size={"icon"}
+              className="flex cursor-pointer items-center justify-center"
+            >
               <MenuIcon className="size-8" />
             </Button>
           </SheetTrigger>

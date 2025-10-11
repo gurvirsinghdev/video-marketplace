@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from "react";
 
 import DashboardDialogHeader from "../dashboard/dialog-header";
 import { loadConnectAndInitialize } from "@stripe/connect-js/pure";
+import { useTheme } from "next-themes";
 
 interface Props {
   clientSecret: string;
@@ -17,6 +18,7 @@ interface Props {
 }
 
 export default function EmbeddedAccountsOnboarding(props: Props) {
+  const { resolvedTheme } = useTheme();
   const [stripeConnectInstance, setStripeConnectInstance] = useState<ReturnType<
     typeof loadConnectAndInitialize
   > | null>(null);
@@ -25,13 +27,50 @@ export default function EmbeddedAccountsOnboarding(props: Props) {
   useEffect(() => {
     if (props.clientSecret && !stripeConnectInstance && !isLoadingRef.current) {
       isLoadingRef.current = true;
-      console.log("Loading Stripe Connect instance");
 
       const load = async () => {
         try {
           const instance = loadConnectAndInitialize({
             publishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!,
             fetchClientSecret: async () => props.clientSecret,
+            fonts: [
+              {
+                src: "url('/fonts/rP2Hp2ywxg089UriCZOIHTWEBlw.woff2') format('woff2')",
+                family: "DM Sans",
+              },
+            ],
+            appearance:
+              resolvedTheme === "light"
+                ? undefined
+                : {
+                    variables: {
+                      colorPrimary: "#0085FF",
+                      colorText: "#C9CED8",
+                      colorBackground: "#14171D",
+                      buttonSecondaryColorBackground: "#2B3039",
+                      buttonSecondaryColorText: "#C9CED8",
+                      colorSecondaryText: "#8C99AD",
+                      actionSecondaryColorText: "#C9CED8",
+                      actionSecondaryTextDecorationColor: "#C9CED8",
+                      colorBorder: "#2B3039",
+                      colorDanger: "#F23154",
+                      badgeNeutralColorBackground: "#1B1E25",
+                      badgeNeutralColorBorder: "#2B3039",
+                      badgeNeutralColorText: "#8C99AD",
+                      badgeSuccessColorBackground: "#152207",
+                      badgeSuccessColorBorder: "#20360C",
+                      badgeSuccessColorText: "#3EAE20",
+                      badgeWarningColorBackground: "#400A00",
+                      badgeWarningColorBorder: "#5F1400",
+                      badgeWarningColorText: "#F27400",
+                      badgeDangerColorBackground: "#420320",
+                      badgeDangerColorBorder: "#61092D",
+                      badgeDangerColorText: "#F46B7D",
+                      offsetBackgroundColor: "#1B1E25",
+                      formBackgroundColor: "#14171D",
+                      overlayBackdropColor: "rgba(0,0,0,0.5)",
+                    },
+                  },
           });
           setStripeConnectInstance(instance);
         } catch (error) {
@@ -45,7 +84,6 @@ export default function EmbeddedAccountsOnboarding(props: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.clientSecret]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (stripeConnectInstance) {
@@ -60,22 +98,37 @@ export default function EmbeddedAccountsOnboarding(props: Props) {
     return null;
   }
 
-  if (!stripeConnectInstance) {
+  if (!stripeConnectInstance || !props.clientSecret) {
     return null;
   }
 
   return (
-    <Dialog open={props.open ?? false} onOpenChange={props.onExit}>
-      <DialogContent className="font-sans">
+    <Dialog
+      open={props.open ?? false}
+      onOpenChange={(open) => {
+        if (!open) {
+          setTimeout(() => {
+            props.onExit?.();
+          }, 150);
+        }
+      }}
+    >
+      <DialogContent className="bg-[#14171D] font-sans">
         <DialogHeader>
-          <DashboardDialogHeader
-            title="Stripe Account Onboarding"
-            brief="Connect your Stripe account to start receiving payments."
-          />
+          <DashboardDialogHeader title="" brief="" />
         </DialogHeader>
-        <ConnectComponentsProvider connectInstance={stripeConnectInstance}>
-          <ConnectAccountOnboarding onExit={props.onExit || (() => {})} />
-        </ConnectComponentsProvider>
+
+        <div className="max-h-[65vh] overflow-auto overflow-x-hidden px-4 pb-4">
+          <ConnectComponentsProvider connectInstance={stripeConnectInstance}>
+            <ConnectAccountOnboarding
+              collectionOptions={{
+                fields: "eventually_due",
+                futureRequirements: "include",
+              }}
+              onExit={props.onExit || (() => {})}
+            />
+          </ConnectComponentsProvider>
+        </div>
       </DialogContent>
     </Dialog>
   );

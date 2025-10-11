@@ -13,6 +13,7 @@ interface Props {
   placeholder?: string;
   values: [string, string][];
   onValueChange: () => void;
+  disabled?: boolean;
 }
 
 export default function SelectInputField({
@@ -20,16 +21,18 @@ export default function SelectInputField({
   values,
   defaultValue,
   onValueChange,
+  disabled,
   ...props
 }: Props) {
   return (
     <Select
-      {...props}
+      disabled={disabled}
       defaultValue={defaultValue}
+      {...props}
       onValueChange={onValueChange}
     >
       <FormControl>
-        <SelectTrigger className="w-full capitalize">
+        <SelectTrigger disabled={disabled} className="w-full capitalize">
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
       </FormControl>

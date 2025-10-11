@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "next build --turbopack",
-    "dev": "next dev --turbopack",
+    "dev": "next dev --experimental-https --turbopack",
     "lint": "eslint",
     "start": "next start",
     "db:generate": "sst shell drizzle-kit generate",

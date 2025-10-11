@@ -119,6 +119,6 @@
   }
 
   iframe {
-    @apply font-mono!;
+    @apply font-sans!;
   }
 }

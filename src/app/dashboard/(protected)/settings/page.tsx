@@ -7,8 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { CountryCodeEnum, CountryCodeToNameMap } from "@/config/stripe.config";
-import { enum_, minLength, object, pipe, string } from "valibot";
-import { useCallback, useState } from "react";
+import { minLength, object, pipe, string } from "valibot";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import BaseForm from "@/modules/form/base-form";
@@ -24,6 +23,7 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import dynamic from "next/dynamic";
 import { toast } from "sonner";
+import { useState } from "react";
 import { useTRPC } from "@/trpc/client";
 
 const EmbeddedAccountsOnboarding = dynamic(
@@ -36,15 +36,6 @@ const accountSchema = object({
   name: pipe(
     string("You must enter your full name."),
     minLength(3, "Name must be at least 3 characters long."),
-  ),
-  registered_name: pipe(
-    string("You must enter your full name"),
-    minLength(3, "Name must be at least 3 characters long."),
-  ),
-  account_type: enum_(
-    (["company", "government_entity", "individual", "non_profit"] as const)
-      .map((value) => ({ [value]: value }))
-      .reduce((acc, current) => ({ ...acc, ...current }), {}),
   ),
   country: CountryCodeEnum,
 });
@@ -113,12 +104,19 @@ export default function DashboardSettingPage() {
 
   const syncStripeAccountStatusMutation = useMutation(
     trpc.user.syncStripeAccountStatus.mutationOptions({
+      onMutate() {
+        toast.loading("Syncing Stripe account...", { id: "sync-stripe" });
+      },
       onError(err) {
         toast.error(err.message, { id: "sync-stripe" });
       },
-      onSuccess() {
-        getLinkedServicesQuery.refetch();
-        toast.success("Stripe Linked!", { id: "stripe" });
+      onSuccess(success) {
+        if (success) {
+          getLinkedServicesQuery.refetch();
+          toast.success("Stripe Linked!", { id: "sync-stripe" });
+        } else {
+          toast.dismiss("sync-stripe");
+        }
       },
     }),
   );
@@ -177,15 +175,12 @@ export default function DashboardSettingPage() {
                   submitForm: (data) => {
                     updateAccountDeatils.mutate({
                       name: data.name,
-                      country: data.country,
                     });
                   },
                 }}
                 defaultValues={{
-                  account_type: authenticatedUserQuery.data.account_type!,
                   name: authenticatedUserQuery.data.name!,
                   country: authenticatedUserQuery.data.country!,
-                  registered_name: authenticatedUserQuery.data.registered_name!,
                 }}
                 schema={accountSchema}
                 shared={{ isLoading: updateAccountDeatils.isPending }}
@@ -200,46 +195,18 @@ export default function DashboardSettingPage() {
                     />
                   )}
                 />
-                <FormField<typeof accountSchema>
-                  name="registered_name"
-                  render={(field) => (
-                    <InputField
-                      placeholder={authenticatedUserQuery.data.registered_name!}
-                      defaultValue={
-                        authenticatedUserQuery.data.registered_name!
-                      }
-                      {...field}
-                    />
-                  )}
-                />
 
                 <FormField<typeof accountSchema>
                   name="country"
                   render={(field) => (
-                    <SelectInputField
-                      defaultValue={authenticatedUserQuery.data.country!}
-                      placeholder="Choose Your Country"
-                      values={Array.from(CountryCodeToNameMap.entries())}
-                      onValueChange={field.onChange}
+                    <InputField
+                      placeholder="Country"
+                      defaultValue={CountryCodeToNameMap.get(
+                        authenticatedUserQuery.data.country!,
+                      )}
                       {...field}
-                    />
-                  )}
-                />
-
-                <FormField<typeof accountSchema>
-                  name="account_type"
-                  render={(field) => (
-                    <SelectInputField
-                      defaultValue={authenticatedUserQuery.data.account_type!}
-                      values={Array.from([
-                        ["company", "company"],
-                        ["government_entity", "government_entity"],
-                        ["individual", "individual"],
-                        ["non_profit", "non_profit"],
-                      ])}
-                      placeholder="Choose Account Type"
-                      onValueChange={field.onChange}
-                      {...field}
+                      disabled
+                      className="hover:cursor-not-allowed"
                     />
                   )}
                 />
@@ -302,16 +269,14 @@ export default function DashboardSettingPage() {
           </div>
         </div>
       </div>
-      {stripePublicClientSecret && (
-        <EmbeddedAccountsOnboarding
-          clientSecret={stripePublicClientSecret}
-          open={!!stripePublicClientSecret}
-          onExit={() => {
-            syncStripeAccountStatusMutation.mutate();
-            setStripePublicClientSecret(null);
-          }}
-        />
-      )}
+      <EmbeddedAccountsOnboarding
+        clientSecret={stripePublicClientSecret!}
+        open={!!stripePublicClientSecret}
+        onExit={() => {
+          syncStripeAccountStatusMutation.mutate();
+          setStripePublicClientSecret(null);
+        }}
+      />
     </section>
   );
 }

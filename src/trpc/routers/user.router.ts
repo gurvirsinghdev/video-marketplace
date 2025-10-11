@@ -14,6 +14,14 @@ import { TRPCError } from "@trpc/server";
 import { db } from "@/db/drizzle";
 import { pipeThroughTRPCErrorHandler } from "./_app";
 
+interface StripeIntegrationMetadata {
+  account_id: string;
+  onboarded: boolean;
+  card_payments?: {
+    status: "active" | "pending" | "restricted";
+  };
+}
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export const userRouter = createTRPCRouter({
@@ -67,7 +75,6 @@ export const userRouter = createTRPCRouter({
           string("You must enter the full name."),
           minLength(3, "Full name must be atleast 3 characters long."),
         ),
-        country: CountryCodeEnum,
       }),
     )
     .mutation(({ input, ctx }) =>
@@ -76,7 +83,6 @@ export const userRouter = createTRPCRouter({
           .update(userTable)
           .set({
             name: input.name,
-            country: input.country,
             updated_at: new Date(),
           })
           .where(eq(userTable.email, ctx.auth.properties.email))
@@ -107,8 +113,7 @@ export const userRouter = createTRPCRouter({
         .limit(1)
         .execute();
 
-      let metadata: { onboarded: boolean; account_id: string } | undefined =
-        undefined;
+      let metadata: StripeIntegrationMetadata | undefined = undefined;
 
       if (!integration) {
         const [dbUser] = await db
@@ -154,10 +159,7 @@ export const userRouter = createTRPCRouter({
           .execute();
       } else {
         metadata = integration.metadata as
-          | {
-              onboarded: boolean;
-              account_id: string;
-            }
+          | StripeIntegrationMetadata
           | undefined;
 
         await db
@@ -213,10 +215,7 @@ export const userRouter = createTRPCRouter({
         });
       }
 
-      const metadata = stripeIntegration.metadata as {
-        account_id: string;
-        onboarded: boolean;
-      };
+      const metadata = stripeIntegration.metadata as StripeIntegrationMetadata;
       if (!metadata || !metadata.account_id) {
         await db
           .delete(integrationTable)
@@ -235,7 +234,7 @@ export const userRouter = createTRPCRouter({
       );
 
       if (
-        connectedAccount.configuration.merchant.card_payments.status !==
+        connectedAccount.configuration.merchant.card_payments.status ===
         "active"
       ) {
         await db
@@ -251,7 +250,9 @@ export const userRouter = createTRPCRouter({
           })
           .where(eq(integrationTable.id, stripeIntegration.id))
           .execute();
+        return true;
       }
+      return false;
     }),
   ),
 

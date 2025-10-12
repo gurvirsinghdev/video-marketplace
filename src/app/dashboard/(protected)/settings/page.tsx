@@ -11,6 +11,7 @@ import { minLength, object, pipe, string } from "valibot";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import BaseForm from "@/modules/form/base-form";
+import DashboardPageContents from "@/modules/dashboard/dashboard-page-contents";
 import DashboardPageHeader from "@/modules/dashboard/page-header";
 import FormActionButtons from "@/modules/form/action-buttons";
 import FormField from "@/modules/form/field";
@@ -20,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2Icon } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import { buildStringSchema } from "@/lib/utils";
 import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import { useState } from "react";
@@ -32,10 +34,10 @@ const EmbeddedAccountsOnboarding = dynamic(
 );
 
 const accountSchema = object({
-  name: pipe(
-    string("You must enter your full name."),
-    minLength(3, "Name must be at least 3 characters long."),
-  ),
+  name: buildStringSchema([
+    "You must enter your full name.",
+    "Name must be atleast 3 characters long",
+  ]),
   country: CountryCodeEnum,
 });
 
@@ -147,7 +149,7 @@ export default function DashboardSettingPage() {
   }
 
   return (
-    <section className="p-4 py-6 sm:space-y-6">
+    <DashboardPageContents>
       <DashboardPageHeader
         title="Settings"
         brief="Manage your account settings and preferences"
@@ -276,6 +278,6 @@ export default function DashboardSettingPage() {
           setStripePublicClientSecret(null);
         }}
       />
-    </section>
+    </DashboardPageContents>
   );
 }

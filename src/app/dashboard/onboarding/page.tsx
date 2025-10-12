@@ -12,19 +12,21 @@ import FormField from "@/modules/form/field";
 import InputField from "@/modules/form/input-field";
 import React from "react";
 import SelectInputField from "@/modules/form/select-input";
+import { buildStringSchema } from "@/lib/utils";
 import { redirect } from "next/navigation";
 import { toast } from "sonner";
 import { useTRPC } from "@/trpc/client";
 
 const onboardingSchema = object({
-  name: pipe(
-    string("You must enter your full name."),
-    minLength(3, "Name must be atleast 3 characters long."),
-  ),
-  registered_name: pipe(
-    string("You must enter your full name"),
-    minLength(3, "Name must be atleast 3 characters long."),
-  ),
+  name: buildStringSchema([
+    "You must enter your full name.",
+    "Name must be atleast 3 characters long.",
+  ]),
+  registered_name: buildStringSchema([
+    "You must exact registered name.",
+    "Name must be atleast 3 characters long.",
+  ]),
+
   account_type: enum_(
     (["company", "government_entity", "individual", "non_profit"] as const)
       .map((value) => ({ [value]: value }))

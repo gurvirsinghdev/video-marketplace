@@ -4,6 +4,7 @@ import {
   pgEnum,
   pgTable,
   primaryKey,
+  text,
   timestamp,
   uuid,
   varchar,
@@ -32,7 +33,6 @@ export const userTable = pgTable(
     country: varchar("country"),
     account_type: userAccountType(),
     registered_name: varchar("registered_name"),
-
     created_at: timestamp("created_at").defaultNow().notNull(),
     updated_at: timestamp("updated_at"),
   },
@@ -54,8 +54,31 @@ export const integrationTable = pgTable(
   (t) => [primaryKey({ columns: [t.id] })],
 );
 
+export const videoStatusEnum = pgEnum("video_status_enum", [
+  "draft",
+  "restricted",
+  "published",
+]);
+export const videoTable = pgTable(
+  "vididpro_video",
+  {
+    id: uuid("id").notNull().defaultRandom(),
+    title: varchar("title").notNull(),
+    description: text("description").notNull(),
+    file_key: varchar("file_key").notNull(),
+    status: videoStatusEnum().notNull().default("draft"),
+    tags: varchar("tags"),
+    price_in_cents: varchar("price_in_cents").notNull(),
+    created_at: timestamp("created_at").defaultNow().notNull(),
+    updated_at: timestamp("updated_at"),
+    user_email: varchar("user_email").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.id] })],
+);
+
 export const userTableRelations = relations(userTable, ({ many }) => ({
   integrations: many(integrationTable),
+  videos: many(videoTable),
 }));
 
 export const integrationTableRelations = relations(
@@ -67,3 +90,10 @@ export const integrationTableRelations = relations(
     }),
   }),
 );
+
+export const videoTableRelations = relations(videoTable, ({ one }) => ({
+  user: one(userTable, {
+    fields: [videoTable.user_email],
+    references: [userTable.email],
+  }),
+}));

@@ -1,15 +1,13 @@
-import { Button } from "@/components/ui/button";
-import { logout } from "@/auth/actions";
+import DashboardPageContents from "@/modules/dashboard/dashboard-page-contents";
+import DashboardPageHeader from "@/modules/dashboard/page-header";
 
 export default function DashboardPage() {
   return (
-    <main className="grid h-full w-full place-items-center">
-      {" "}
-      <p>
-        <Button onClick={logout} variant={"destructive"}>
-          Logout
-        </Button>
-      </p>
-    </main>
+    <DashboardPageContents>
+      <DashboardPageHeader
+        title="Dashboard"
+        brief="Welcome Back! See what's happening with your account."
+      />
+    </DashboardPageContents>
   );
 }

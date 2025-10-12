@@ -18,6 +18,7 @@ import { integrationTable, userTable } from "@/db/schemas/app.schema";
 import { CountryCodeEnum } from "@/config/stripe.config";
 import Stripe from "stripe";
 import { TRPCError } from "@trpc/server";
+import { buildStringSchema } from "@/lib/utils";
 import { db } from "@/db/drizzle";
 import { pipeThroughTRPCErrorHandler } from "./_app";
 
@@ -33,14 +34,15 @@ export const userRouter = createTRPCRouter({
   finishOnboarding: protectedProcedure
     .input(
       object({
-        name: pipe(
-          string("You must enter your full name"),
-          minLength(3, "Name must be at least 3 characters long."),
-        ),
-        registered_name: pipe(
-          string("You must enter your full name"),
-          minLength(3, "Name must be at least 3 characters long."),
-        ),
+        name: buildStringSchema([
+          "You must enter your full name.",
+          "Name must be atleast 3 characters long.",
+        ]),
+
+        registered_name: buildStringSchema([
+          "You must exact registered name.",
+          "Name must be atleast 3 characters long.",
+        ]),
         country: CountryCodeEnum,
         account_type: enum_(
           (
@@ -76,10 +78,10 @@ export const userRouter = createTRPCRouter({
   updateAccountDetails: protectedProcedure
     .input(
       object({
-        name: pipe(
-          string("You must enter the full name."),
-          minLength(3, "Full name must be at least 3 characters long."),
-        ),
+        name: buildStringSchema([
+          "You must enter your full name.",
+          "Name must be atleast 3 characters long.",
+        ]),
       }),
     )
     .mutation(async ({ input, ctx }) =>

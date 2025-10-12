@@ -8,19 +8,19 @@ import { Form } from "@/components/ui/form";
 import { cn } from "@/lib/utils";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-interface Props<TSchema extends BaseSchema<any, any, any>> {
+interface Props<
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  TSchema extends BaseSchema<any, any, any>,
+  Input = InferInput<TSchema>,
+> {
   schema: TSchema;
   handlers: {
-    submitForm: (
-      data: InferInput<TSchema>,
-      form: UseFormReturn<InferInput<TSchema>>,
-    ) => void;
+    submitForm: (data: Input, form: UseFormReturn<InferInput<TSchema>>) => void;
   };
   children: React.ReactNode;
   className?: string;
   shared?: BaseFormContext;
-  defaultValues?: InferInput<TSchema>;
+  defaultValues?: Input;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

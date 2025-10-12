@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { authRouter } from "./auth.router";
 import { createTRPCRouter } from "../init";
 import { userRouter } from "./user.router";
+import { videoRouter } from "./video.router";
 
 export function pipeThroughTRPCErrorHandler<T extends () => ReturnType<T>>(
   callbackFn: T,
@@ -22,6 +23,7 @@ export function pipeThroughTRPCErrorHandler<T extends () => ReturnType<T>>(
 export const appRouter = createTRPCRouter({
   auth: authRouter,
   user: userRouter,
+  video: videoRouter,
 });
 
 export type AppRouter = typeof appRouter;

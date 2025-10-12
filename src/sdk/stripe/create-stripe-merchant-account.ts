@@ -1,12 +1,12 @@
 import axios, { AxiosError } from "axios";
 
+import { headers } from ".";
+
 interface ICreateCoreAccountPayload {
   contact_email: string;
   display_name: string;
   dashboard: "express";
   defaults: {
-    currency: "usd";
-    locales: ["en-US"];
     responsibilities: {
       fees_collector: "application";
       losses_collector: "application";
@@ -48,11 +48,6 @@ interface ICreateCoreAccountPayload {
   )[];
 }
 
-const headers = {
-  Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY!}`,
-  "Stripe-Version": "2025-08-27.preview",
-};
-
 export const extendBaseCreateCorePayload = <
   TPayload extends Omit<
     ICreateCoreAccountPayload,
@@ -65,8 +60,6 @@ export const extendBaseCreateCorePayload = <
     ...payload,
     dashboard: "express",
     defaults: {
-      currency: "usd",
-      locales: ["en-US"],
       responsibilities: {
         fees_collector: "application",
         losses_collector: "application",
@@ -108,35 +101,9 @@ export const createStripeMerchantAccount = async (
   try {
     return (
       await axios.post("https://api.stripe.com/v2/core/accounts", payload, {
-        headers,
+        headers: headers,
       })
     ).data;
-  } catch (err) {
-    console.error((err as AxiosError).response);
-    throw err;
-  }
-};
-
-export const getConnectedAccountUsingId = async function (id: string) {
-  try {
-    return (
-      await axios.get(
-        "https://api.stripe.com/v2/core/accounts/" +
-          id +
-          "?include=identity&include=configuration.merchant",
-        {
-          headers,
-        },
-      )
-    ).data as {
-      configuration: {
-        merchant: {
-          card_payments: {
-            status: "active" | "pending" | "restricted";
-          };
-        };
-      };
-    };
   } catch (err) {
     console.error((err as AxiosError).response);
     throw err;

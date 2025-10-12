@@ -18,7 +18,6 @@ import Image from "next/image";
 import InputField from "@/modules/form/input-field";
 import { Label } from "@/components/ui/label";
 import { Loader2Icon } from "lucide-react";
-import SelectInputField from "@/modules/form/select-input";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import dynamic from "next/dynamic";

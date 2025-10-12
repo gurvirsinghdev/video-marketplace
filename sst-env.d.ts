@@ -14,6 +14,10 @@ declare module "sst" {
       "type": "sst.aws.Service"
       "url": string
     }
+    "VididProObjectStorage": {
+      "name": string
+      "type": "sst.aws.Bucket"
+    }
     "VididProPostgresDB": {
       "database": string
       "host": string
@@ -21,6 +25,10 @@ declare module "sst" {
       "port": number
       "type": "sst.aws.Postgres"
       "username": string
+    }
+    "VididProRouter": {
+      "type": "sst.aws.Router"
+      "url": string
     }
     "VididProVPC": {
       "type": "sst.aws.Vpc"

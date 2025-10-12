@@ -68,7 +68,7 @@ export const videoTable = pgTable(
     file_key: varchar("file_key").notNull(),
     status: videoStatusEnum().notNull().default("draft"),
     tags: varchar("tags"),
-    price_in_cents: varchar("price_in_cents").notNull(),
+    price: varchar("price").notNull(),
     created_at: timestamp("created_at").defaultNow().notNull(),
     updated_at: timestamp("updated_at"),
     user_email: varchar("user_email").notNull(),

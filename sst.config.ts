@@ -73,26 +73,39 @@ export default $config({
     });
 
     /**
+     * Setting up an S3 bucket to store video
+     * files. Since we have not provided public
+     * access, we will be using CloudFront to
+     * deliver videos quickly to users.
+     */
+    const bucket = new sst.aws.Bucket("VididProObjectStorage");
+
+    /**
+     * Setting up a CloudFront distribution to
+     * serve the application and video files
+     * with the least possible latency.
+     */
+    const router = new sst.aws.Router("VididProRouter", {});
+
+    /**
      * Creates a service within the ECS Cluster to run the containerized
      * Next.js application.
      */
-    new sst.aws.Service("VididProApplicationService", {
+    const application = new sst.aws.Service("VididProApplicationService", {
       cluster: appCluster,
       architecture: "arm64",
-      link: [auth, db],
+      link: [auth, db, bucket, router],
       loadBalancer: {
-        domain: {
-          name: "yoursite.live",
-          dns: sst.cloudflare.dns(),
-        },
-        ports: [
-          { listen: "80/http", redirect: "443/https" },
-          { listen: "443/https", forward: "3000/http" },
-        ],
+        ports: [{ listen: "80/http", redirect: "3000/http" }],
       },
       dev: {
         command: "pnpm dev",
       },
     });
+
+    /**
+     * Navigating the traffic to the application
+     */
+    router.route("/", application.url);
   },
 });

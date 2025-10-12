@@ -1,0 +1,1 @@
+ALTER TABLE "vididpro_video" RENAME COLUMN "price_in_cents" TO "price";

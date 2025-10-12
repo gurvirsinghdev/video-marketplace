@@ -12,6 +12,8 @@
     "db:migrate": "sst shell drizzle-kit migrate"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.908.0",
+    "@aws-sdk/s3-request-presigner": "^3.908.0",
     "@hookform/resolvers": "^5.2.2",
     "@openauthjs/openauth": "^0.4.3",
     "@radix-ui/react-accordion": "^1.2.12",

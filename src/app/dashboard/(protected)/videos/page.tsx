@@ -1,35 +1,17 @@
-"use client";
+import { HydrationBoundary, dehydrate } from "@tanstack/react-query";
+import { getQueryClient, trpc } from "@/trpc/server";
 
-import { Button } from "@/components/ui/button";
-import DashboardPageContents from "@/modules/dashboard/dashboard-page-contents";
-import DashboardPageHeader from "@/modules/dashboard/page-header";
-import { PlusIcon } from "lucide-react";
-import UploadVideoDialog from "@/modules/videos/upload-video-dialog";
-import { useState } from "react";
+import DashboardVideosView from "@/views/dashboard/videos.page";
 
-export default function DashboardVideosPage() {
-  const [isUploadingVidoe, setIsUploadingVideo] = useState<boolean>(false);
+export default async function DashboardVideosPage() {
+  const queryClient = getQueryClient();
+  void queryClient.prefetchQuery(
+    trpc.video.listMyVideosPaginated.queryOptions(),
+  );
 
   return (
-    <DashboardPageContents>
-      <DashboardPageHeader
-        title="Upload Video"
-        brief="Select a video file to upload and manage."
-      >
-        <Button
-          onClick={() => setIsUploadingVideo(true)}
-          variant={"outline"}
-          className="flex w-full cursor-pointer flex-row items-center justify-center"
-        >
-          <PlusIcon />
-          <span>Upload Video</span>
-        </Button>
-
-        <UploadVideoDialog
-          open={isUploadingVidoe}
-          setOpen={setIsUploadingVideo}
-        />
-      </DashboardPageHeader>
-    </DashboardPageContents>
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <DashboardVideosView />
+    </HydrationBoundary>
   );
 }

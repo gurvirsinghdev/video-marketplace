@@ -5,20 +5,18 @@
 
 declare module "sst" {
   export interface Resource {
-    "VidIDProAuthServer": {
-      "type": "sst.aws.Auth"
+    "Application": {
+      "type": "sst.aws.Nextjs"
       "url": string
     }
-    "VididProApplicationService": {
-      "service": string
-      "type": "sst.aws.Service"
+    "ApplicationVPC": {
+      "type": "sst.aws.Vpc"
+    }
+    "Cdn": {
+      "type": "sst.sst.Linkable"
       "url": string
     }
-    "VididProObjectStorage": {
-      "name": string
-      "type": "sst.aws.Bucket"
-    }
-    "VididProPostgresDB": {
+    "DB": {
       "database": string
       "host": string
       "password": string
@@ -26,12 +24,21 @@ declare module "sst" {
       "type": "sst.aws.Postgres"
       "username": string
     }
-    "VididProRouter": {
-      "type": "sst.aws.Router"
+    "OpenAuth": {
+      "type": "sst.aws.Auth"
       "url": string
     }
-    "VididProVPC": {
-      "type": "sst.aws.Vpc"
+    "S3": {
+      "name": string
+      "type": "sst.aws.Bucket"
+    }
+    "UnprocessedVideosQueue": {
+      "type": "sst.aws.Queue"
+      "url": string
+    }
+    "VideoProcessor": {
+      "name": string
+      "type": "sst.aws.Function"
     }
   }
 }

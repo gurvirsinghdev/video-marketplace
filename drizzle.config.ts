@@ -7,10 +7,10 @@ export default defineConfig({
   dialect: "postgresql",
   dbCredentials: {
     ssl: process.env.NODE_ENV === "production",
-    host: Resource.VididProPostgresDB.host,
-    port: Resource.VididProPostgresDB.port,
-    user: Resource.VididProPostgresDB.username,
-    password: Resource.VididProPostgresDB.password,
-    database: Resource.VididProPostgresDB.database,
+    host: Resource.DB.host,
+    port: Resource.DB.port,
+    user: Resource.DB.username,
+    password: Resource.DB.password,
+    database: Resource.DB.database,
   },
 });

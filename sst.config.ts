@@ -1,5 +1,6 @@
 // eslint-disable-next-line @typescript-eslint/triple-slash-reference
 /// <reference path="./.sst/platform/config.d.ts" />
+
 export default $config({
   app() {
     return {
@@ -8,10 +9,7 @@ export default $config({
       home: "aws",
       providers: {
         aws: {
-          region: "eu-west-2",
-        },
-        cloudflare: {
-          apiToken: process.env.CLOUDFLARE_API_TOKEN!,
+          region: "ap-south-1",
         },
       },
     };
@@ -24,7 +22,7 @@ export default $config({
      *
      * The managed NAT gateway is an overkill here.
      */
-    const vpc = new sst.aws.Vpc("VididProVPC", {
+    const applicationVPC = new sst.aws.Vpc("ApplicationVPC", {
       nat: {
         type: "ec2",
         ec2: {
@@ -34,9 +32,9 @@ export default $config({
     });
 
     /**
-     * Setting up an OpenAuth Issuer server
+     * Setting up an OpenAuth Authorizer
      */
-    const auth = new sst.aws.Auth("VidIDProAuthServer", {
+    const auth = new sst.aws.Auth("OpenAuth", {
       issuer: {
         handler: "openauth/index.handler",
         environment: {
@@ -44,68 +42,139 @@ export default $config({
           MAILGUN_SENDING_KEY: process.env.MAILGUN_SENDING_KEY!,
         },
       },
-      domain: {
-        name: "auth.yoursite.live",
-        dns: sst.cloudflare.dns(),
+    });
+
+    /**
+     * Setting up a SQS queue to store video processing jobs.
+     */
+    const queue = new sst.aws.Queue("UnprocessedVideosQueue");
+
+    /**
+     * Setting up a S3 bucket to store videos.
+     */
+    const s3 = new sst.aws.Bucket("S3", {
+      policy: [
+        {
+          effect: "allow",
+          actions: ["s3:GetObject"],
+          principals: "*",
+          conditions: [
+            {
+              test: "ArnLike",
+              variable: "AWS:SourceArn",
+              values: [
+                `arn:aws:cloudfront::${process.env.AWS_ACCOUNT_ID}:distribution/*`,
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    /**
+     * Setting up a Lambda function to process videos.
+     */
+    const videoProcessor = new sst.aws.Function("VideoProcessor", {
+      copyFiles: [
+        { from: "public/images/icon.png", to: "watermark.png" },
+        { from: "lambda/ffmpeg", to: "ffmpeg" },
+      ],
+      architecture: "arm64",
+      link: [queue, s3],
+      handler: "lambda/ffmpeg.handler",
+      nodejs: { install: ["mime", "chalk"] },
+    });
+
+    /**
+     * Sending ObjectCreated events to the queue.
+     */
+    s3.notify({
+      notifications: [
+        {
+          queue,
+          name: "ProcessVideo",
+          events: ["s3:ObjectCreated:Put"],
+        },
+      ],
+    });
+
+    /**
+     * Setting up a Lambda trigger to process arriving videos.
+     */
+    queue.subscribe(videoProcessor.arn);
+
+    /**
+     * Setting up a CloudFront distribution to serve the videos
+     * from the S3 bucket with minimal latency.
+     */
+
+    const { cloudfront } = await import("@pulumi/aws");
+    const originAccessIdentity = new cloudfront.OriginAccessIdentity(
+      "VididProOriginAccessIdentity",
+    );
+    const videosCdnOriginId = "VididProVideosCdn";
+    const defaultCacheBehavior = {
+      targetOriginId: videosCdnOriginId,
+      viewerProtocolPolicy: "redirect-to-https",
+      allowedMethods: ["GET", "HEAD"],
+      cachedMethods: ["GET", "HEAD"],
+      forwardedValues: {
+        queryString: false,
+        cookies: { forward: "none" },
+        headers: ["Content-Length"],
+      },
+    };
+    const videosCdn = new sst.aws.Cdn("VideosCdn", {
+      origins: [
+        {
+          domainName: s3.domain,
+          originId: videosCdnOriginId,
+          s3OriginConfig: {
+            originAccessIdentity:
+              originAccessIdentity.cloudfrontAccessIdentityPath,
+          },
+        },
+      ],
+      defaultCacheBehavior,
+      orderedCacheBehaviors: [
+        {
+          ...defaultCacheBehavior,
+          pathPattern: "/thumbnails/*",
+        },
+        { ...defaultCacheBehavior, pathPattern: "/m3u8/*" },
+      ],
+    });
+    const linkableVideosCdn = new sst.Linkable("Cdn", {
+      properties: {
+        url: videosCdn.url,
       },
     });
 
     /**
-     * Creates an ECS cluster within the VPC to run containerized app.
+     * Setting up a PostgreSQL database to store data.
      */
-    const appCluster = new sst.aws.Cluster("VididProApplicationCluster", {
-      vpc: vpc,
-    });
-
-    /**
-     * Setting up a relational PostgresSQL database to store data.
-     */
-    const db = new sst.aws.Postgres("VididProPostgresDB", {
-      vpc: vpc,
-      database: "vididpro_db",
+    const db = new sst.aws.Postgres("DB", {
+      vpc: applicationVPC,
+      multiAz: true,
       dev: {
         host: "localhost",
+        database: "vididpro",
+        password: "password",
         port: 5432,
         username: "admin",
-        password: "password",
-        database: "vididpro_db",
       },
     });
 
     /**
-     * Setting up an S3 bucket to store video
-     * files. Since we have not provided public
-     * access, we will be using CloudFront to
-     * deliver videos quickly to users.
+     * Setting up the application.
      */
-    const bucket = new sst.aws.Bucket("VididProObjectStorage");
-
-    /**
-     * Setting up a CloudFront distribution to
-     * serve the application and video files
-     * with the least possible latency.
-     */
-    const router = new sst.aws.Router("VididProRouter", {});
-
-    /**
-     * Creates a service within the ECS Cluster to run the containerized
-     * Next.js application.
-     */
-    const application = new sst.aws.Service("VididProApplicationService", {
-      cluster: appCluster,
-      architecture: "arm64",
-      link: [auth, db, bucket, router],
-      loadBalancer: {
-        ports: [{ listen: "80/http", redirect: "3000/http" }],
-      },
+    new sst.aws.Nextjs("Application", {
+      vpc: applicationVPC,
+      link: [auth, db, s3, linkableVideosCdn],
+      buildCommand: "npm run build",
       dev: {
-        command: "pnpm dev",
+        command: "npm run dev",
       },
     });
-
-    /**
-     * Navigating the traffic to the application
-     */
-    router.route("/", application.url);
   },
 });

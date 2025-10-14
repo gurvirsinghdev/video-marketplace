@@ -3,8 +3,8 @@ import { createClient } from "@openauthjs/openauth";
 import { cookies as getCookies } from "next/headers";
 
 export const client = createClient({
-  clientID: "VidIDProApplication",
-  issuer: Resource.VidIDProAuthServer.url,
+  clientID: "VididProApplication",
+  issuer: Resource.OpenAuth.url,
 });
 
 export const accessCookieName = "access_token";

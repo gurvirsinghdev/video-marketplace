@@ -10,6 +10,7 @@ export function pipeThroughTRPCErrorHandler<T extends () => ReturnType<T>>(
   try {
     return callbackFn();
   } catch (error) {
+    console.log((error as Error).message);
     if (error instanceof TRPCError) {
       throw error;
     }

@@ -1,11 +1,18 @@
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import { buildPriceSchema, buildStringSchema } from "@/lib/utils";
+import {
+  buildFileSchema,
+  buildPriceSchema,
+  buildStringSchema,
+} from "@/lib/utils";
 import { createTRPCRouter, protectedProcedure } from "../init";
 import { enum_, object } from "valibot";
 
 import { Resource } from "sst";
 import { db } from "@/db/drizzle";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { eq } from "drizzle-orm";
+import { getSignedUrl as getS3SignedUrl } from "@aws-sdk/s3-request-presigner";
+import { getThumbnailUrl } from "@/lib/cloudfront";
+import path from "path";
 import { pipeThroughTRPCErrorHandler } from "./_app";
 import { videoTable } from "@/db/schemas/app.schema";
 
@@ -16,10 +23,10 @@ export const videoRouter = createTRPCRouter({
     pipeThroughTRPCErrorHandler(async () => {
       const key = crypto.randomUUID();
       const command = new PutObjectCommand({
-        Key: key,
-        Bucket: Resource.VididProObjectStorage.name,
+        Key: "original/" + key,
+        Bucket: Resource.S3.name,
       });
-      const url = await getSignedUrl(s3Client, command, {
+      const url = await getS3SignedUrl(s3Client, command, {
         expiresIn: 300,
       });
 
@@ -47,7 +54,7 @@ export const videoRouter = createTRPCRouter({
           .insert(videoTable)
           .values({
             description: input.description,
-            file_key: input.fileKey,
+            original_key: input.fileKey,
             price: input.price,
             title: input.title,
             user_email: ctx.auth.properties.email,
@@ -57,4 +64,21 @@ export const videoRouter = createTRPCRouter({
           .execute();
       }),
     ),
+
+  listMyVideosPaginated: protectedProcedure.query(async ({ ctx }) =>
+    pipeThroughTRPCErrorHandler(async () => {
+      const records = await db
+        .select()
+        .from(videoTable)
+        .where(eq(videoTable.user_email, ctx.auth.properties.email))
+        .execute();
+
+      return records.map(
+        ({ original_key, thumbnail_key, m3u8_key, ...record }) => ({
+          ...record,
+          thumbnail: getThumbnailUrl(original_key),
+        }),
+      );
+    }),
+  ),
 });

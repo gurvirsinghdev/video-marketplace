@@ -34,7 +34,7 @@ const app = issuer({
   },
   theme: {
     ...THEME_SUPABASE,
-    title: "VidIDPro Issuer",
+    title: "VididPro Issuer",
     font: {
       family: "DM Sans, sans-serif",
     },

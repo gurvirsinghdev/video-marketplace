@@ -8,7 +8,7 @@ import {
   buildPriceSchema,
   buildStringSchema,
 } from "@/lib/utils";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import BaseForm from "../form/base-form";
 import DashboardDialogHeader from "../dashboard/dialog-header";
@@ -17,7 +17,6 @@ import FormActionButtons from "../form/action-buttons";
 import FormField from "../form/field";
 import InputField from "../form/input-field";
 import SelectInputField from "../form/select-input";
-import { TRPCErrorResponse } from "@trpc/server/unstable-core-do-not-import";
 import TextareaField from "../form/textarea-field";
 import { toast } from "sonner";
 import { useTRPC } from "@/trpc/client";
@@ -45,6 +44,7 @@ export default function UploadVideoDialog(props: Props) {
     trpc.video.generatePresignedUrl.queryOptions(undefined, { enabled: false }),
   );
   const [isUploading, setIsUploading] = useState<boolean>(false);
+  const queryClient = useQueryClient();
 
   const createNewVideoMutation = useMutation(
     trpc.video.createNewVideo.mutationOptions({
@@ -54,6 +54,9 @@ export default function UploadVideoDialog(props: Props) {
       onSuccess() {
         toast.success("Upload Complete!", { id: "upload-file" });
         props.setOpen(false);
+        queryClient.invalidateQueries(
+          trpc.video.listMyVideosPaginated.queryOptions(),
+        );
       },
     }),
   );
@@ -68,9 +71,7 @@ export default function UploadVideoDialog(props: Props) {
         if (!queryResult) {
           toast.error(
             "Unable to figure out where to upload the file. Please try again later.",
-            {
-              id: "upload-file",
-            },
+            { id: "upload-file" },
           );
           return reject();
         }
@@ -89,24 +90,26 @@ export default function UploadVideoDialog(props: Props) {
         };
 
         xhr.onreadystatechange = function () {
-          if (xhr.readyState === 4 && xhr.status >= 200 && xhr.status < 300) {
-            createNewVideoMutation
-              .mutateAsync({
-                description: data.description,
-                price: data.price,
-                status: data.status,
-                tags: data.tags,
-                title: data.title,
-                fileKey: queryResult.fileKey,
-              })
-              .then(resolve)
-              .catch(reject);
-          } else {
-            toast.error(
-              "Failed while uploading the video. Please try again later.",
-              { id: "upload-file" },
-            );
-            return reject();
+          if (xhr.readyState === 4) {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              createNewVideoMutation
+                .mutateAsync({
+                  description: data.description,
+                  price: data.price,
+                  status: data.status,
+                  tags: data.tags,
+                  title: data.title,
+                  fileKey: queryResult.fileKey,
+                })
+                .then(resolve)
+                .catch(reject);
+            } else {
+              toast.error(
+                "Failed while uploading the video. Please try again later.",
+                { id: "upload-file" },
+              );
+              return reject();
+            }
           }
         };
 

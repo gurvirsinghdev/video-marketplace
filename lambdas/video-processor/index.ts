@@ -1,5 +1,5 @@
-import { createReadStream, createWriteStream } from "fs";
-import { mkdir, readdir, rmdir, unlink } from "fs/promises";
+import { createReadStream, createWriteStream, existsSync } from "fs";
+import { exists, mkdir, readdir, rmdir, unlink } from "fs/promises";
 
 import { Readable } from "stream";
 import { ReadableStream } from "stream/web";
@@ -151,12 +151,12 @@ const convertToHLS = async (
   outputDir: string,
   playlistPath: string,
 ) => {
-  await mkdir(outputDir);
+  if (!existsSync(outputDir)) await mkdir(outputDir);
   await exec(ffmpegPath, [
     "-i",
     input,
     "-vf",
-    "scale=iw:480",
+    "scale=854:480:force_original_aspect_ratio=decrease,pad=854:480:(ow-iw)/2:(oh-ih)/2",
     "-c:a",
     "aac",
     "-b:a",

@@ -1,7 +1,6 @@
 "use client";
 
 import { AppRouter } from "@/trpc/routers/_app";
-import { Checkbox } from "@/components/ui/checkbox";
 import { DotIcon } from "lucide-react";
 import { VideoThumbnail } from "./video-thumbnail";
 import { inferProcedureOutput } from "@trpc/server";
@@ -10,7 +9,7 @@ import moment from "moment";
 interface Props {
   video: inferProcedureOutput<
     AppRouter["video"]["listMyVideosPaginated"]
-  >[number];
+  >["records"][number];
   author: string;
 }
 

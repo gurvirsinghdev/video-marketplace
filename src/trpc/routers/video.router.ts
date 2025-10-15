@@ -87,6 +87,7 @@ export const videoRouter = createTRPCRouter({
             ({ original_key, thumbnail_key, m3u8_key, ...record }) => ({
               ...record,
               thumbnail_key: getCloudfrontUrl(thumbnail_key!),
+              m3u8_key: getCloudfrontUrl(m3u8_key!),
             }),
           ),
         };

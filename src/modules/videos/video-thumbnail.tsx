@@ -16,6 +16,7 @@ export function VideoThumbnail({
 }: VideoThumbnailProps) {
   const [loaded, setLoaded] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const invalidUrl = new URL(thumbnailUrl).pathname == "/null";
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -24,7 +25,7 @@ export function VideoThumbnail({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    if (new URL(thumbnailUrl).pathname == "/null") return;
+    if (invalidUrl) return;
 
     // Load the image
     const img = new Image();
@@ -56,12 +57,14 @@ export function VideoThumbnail({
           )}
         >
           <div className="relative">
-            <canvas
-              ref={canvasRef}
-              className={cn("h-12 w-20 object-cover", sizeClassName)}
-              width={80}
-              height={48}
-            />
+            {!invalidUrl && (
+              <canvas
+                ref={canvasRef}
+                className={cn("h-12 w-20 object-cover", sizeClassName)}
+                width={80}
+                height={48}
+              />
+            )}
             {loaded && (
               <div className="bg-background/50 absolute -top-1 -right-1 -bottom-1 -left-1"></div>
             )}

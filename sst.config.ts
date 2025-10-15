@@ -174,9 +174,5 @@ export default $config({
         command: "npm run dev",
       },
     });
-
-    return {
-      oai: originAccessIdentity.iamArn,
-    };
   },
 });

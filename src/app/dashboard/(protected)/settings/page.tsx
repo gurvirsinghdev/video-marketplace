@@ -11,6 +11,7 @@ import { minLength, object, pipe, string } from "valibot";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import BaseForm from "@/modules/form/base-form";
+import BaseLoader from "@/modules/base/loader";
 import DashboardPageContents from "@/modules/dashboard/dashboard-page-contents";
 import DashboardPageHeader from "@/modules/dashboard/page-header";
 import FormActionButtons from "@/modules/form/action-buttons";
@@ -143,7 +144,8 @@ export default function DashboardSettingPage() {
   if (authenticatedUserQuery.isLoading) {
     return (
       <div className="grid h-full w-full place-items-center">
-        <Loader2Icon className="h-6 w-6 animate-spin" />
+        {/* TODO: Change classname w-6 h-6 */}
+        <BaseLoader />
       </div>
     );
   }
@@ -169,7 +171,7 @@ export default function DashboardSettingPage() {
 
           <div className="w-full max-w-screen xl:max-w-xl">
             {!authenticatedUserQuery.data ? (
-              <Loader2Icon className="size-4 h-4 w-4 animate-spin" />
+              <BaseLoader />
             ) : (
               <BaseForm
                 handlers={{
@@ -221,7 +223,9 @@ export default function DashboardSettingPage() {
         {/* Stripe Integration Section */}
         <div className="flex flex-col gap-4 py-10">
           <div className="min-w-[18rem] space-y-1">
-            <h2 className="text-lg font-medium">Integrations</h2>
+            <h2 className="text-lg font-medium" id="integrations">
+              Integrations
+            </h2>
             <p className="text-muted-foreground text-sm">
               Connect and manage your third-party tools.
             </p>

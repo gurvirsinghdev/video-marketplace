@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getQueryClient, trpc } from "@/trpc/server";
 
+import BaseLoader from "@/modules/base/loader";
 import DashboardBreadcrumbs from "../../modules/dashboard/breadcrumbs";
 import DashboardUserAvatar from "../../modules/dashboard/user-avatar";
 import Link from "next/link";
@@ -31,9 +32,7 @@ export default async function DashboardLayout(
       <SidebarProvider className="w-full overflow-x-hidden">
         <Sidebar className="broder-r">
           <SidebarHeader className="border-b p-4">
-            <Suspense
-              fallback={<Loader2Icon className="size-4 h-4 w-4 animate-spin" />}
-            >
+            <Suspense fallback={<BaseLoader />}>
               <DashboardUserAvatar />
             </Suspense>
           </SidebarHeader>

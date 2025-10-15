@@ -3,6 +3,7 @@
 import { Loader2Icon, PlayIcon } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 
+import BaseLoader from "../base/loader";
 import { cn } from "@/lib/utils";
 
 interface VideoThumbnailProps {
@@ -76,7 +77,7 @@ export function VideoThumbnail({
               </div>
             ) : (
               <div className="text-muted-foreground flex items-center justify-center">
-                <Loader2Icon className="animate-spin" />
+                <BaseLoader />
               </div>
             )}
           </div>

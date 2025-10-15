@@ -1,5 +1,6 @@
 "use client";
 
+import BaseLoader from "../base/loader";
 import FormButton from "./button";
 import { Loader2Icon } from "lucide-react";
 import { useBaseFormContext } from "./form-context";
@@ -24,11 +25,7 @@ export default function FormActionButtons(props: Props) {
         Reset
       </FormButton>
       <FormButton disabled={isLoading} variant={"outline"}>
-        {isLoading ? (
-          <Loader2Icon className="animate-spin" />
-        ) : (
-          props.buttonLabel
-        )}
+        {isLoading ? <BaseLoader /> : props.buttonLabel}
       </FormButton>
     </div>
   );

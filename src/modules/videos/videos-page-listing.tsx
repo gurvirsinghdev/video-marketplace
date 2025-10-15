@@ -1,11 +1,13 @@
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
 import React, { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { AppRouter } from "@/trpc/routers/_app";
+import { Badge } from "@/components/ui/badge";
+import BaseLoader from "../base/loader";
 import DashboardDialogHeader from "../dashboard/dialog-header";
 import PaginatedList from "../tables/paginated-list";
 import VideoItem from "./video-item";
@@ -78,6 +80,7 @@ export default function VideosPageListing() {
               newSearchParams.set("page", page.toString());
               router.push(`?${newSearchParams.toString()}`);
             }}
+            emptyText="No videos to display. It looks like you haven’t uploaded any yet."
             pageSize={listMyVideosPaginatedQuery.data.pageSize}
             totalPages={listMyVideosPaginatedQuery.data.pages}
             className="divide-y"
@@ -97,19 +100,51 @@ export default function VideosPageListing() {
 
       <Dialog
         open={selectedVideo != null}
-        onOpenChange={() => setSelectedVideo(null)}
+        onOpenChange={() => {
+          setSelectedVideo(null);
+        }}
       >
-        <DialogContent>
-          <DashboardDialogHeader title="" brief="" />
-          {selectedVideo ? (
-            <VideoPlayer
-              thumbnailUrl={selectedVideo.thumbnail_key}
-              playlistUrl={selectedVideo.m3u8_key}
-            />
-          ) : (
-            <div className="bg-accent aspect-video h-full w-full animate-pulse"></div>
-          )}
-        </DialogContent>
+        {selectedVideo && (
+          <DialogContent>
+            <DialogHeader>
+              <DashboardDialogHeader title={"Video Details"} brief={""} />
+            </DialogHeader>
+
+            <Card className="border-none bg-transparent py-0">
+              <CardContent className="space-y-3 px-0">
+                {new URL(selectedVideo.m3u8_key).pathname != "/null" ? (
+                  <VideoPlayer
+                    thumbnailUrl={selectedVideo.thumbnail_key}
+                    playlistUrl={selectedVideo.m3u8_key}
+                    className="h-auto w-full"
+                  />
+                ) : (
+                  <div className="bg-card relative aspect-video h-full w-full animate-pulse rounded-lg">
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+                      <BaseLoader />
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <div>
+              <h3 className="truncate md:text-lg">{selectedVideo.title}</h3>
+              <p className="text-muted-foreground line-clamp-3 text-xs md:text-sm">
+                {selectedVideo.description}
+              </p>
+              {selectedVideo.tags && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {selectedVideo.tags.split(",").map((tag, idx) => (
+                    <Badge variant={"secondary"} key={idx}>
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        )}
       </Dialog>
     </React.Fragment>
   );

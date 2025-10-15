@@ -139,10 +139,17 @@ const getFileExtension = async (
 };
 
 const generateThumbnail = async (input: string, output: string) => {
-  await exec(
-    ffmpegPath,
-    `-i ${input} -ss 00:00:02 -vframes 1 -vf scale=320:-1 ${output}`.split(" "),
-  );
+  await exec(ffmpegPath, [
+    "-i",
+    input,
+    "-ss",
+    "00:00:00",
+    "-vframes",
+    "1",
+    "-vf",
+    "scale=1280:-1",
+    output,
+  ]);
   logger.success(`Thumbnail generated: ${output}`, "FFmpeg");
 };
 

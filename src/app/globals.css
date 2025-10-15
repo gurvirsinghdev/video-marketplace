@@ -121,4 +121,8 @@
   iframe {
     @apply font-sans!;
   }
+
+  .plyr {
+    @apply rounded-xl! overflow-hidden!;
+  }
 }

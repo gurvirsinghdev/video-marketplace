@@ -31,7 +31,7 @@ export default function RootLayout({
 }>) {
   return (
     <TRPCReactProvider>
-      <html lang="en" suppressHydrationWarning>
+      <html lang="en" className="scroll-smooth" suppressHydrationWarning>
         <body
           className={`${sansFont.variable} ${monoFont.variable} antialiased`}
         >

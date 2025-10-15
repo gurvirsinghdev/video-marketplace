@@ -100,6 +100,7 @@ export default $config({
       architecture: "arm64",
       link: [queue, s3, db],
       handler: "lambdas/video-processor/index.handler",
+      timeout: "15 minutes",
       nodejs: { install: ["mime", "chalk", "drizzle-orm"] },
     });
 

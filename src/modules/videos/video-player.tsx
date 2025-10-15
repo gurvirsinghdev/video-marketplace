@@ -1,15 +1,19 @@
 "use client";
 
-import "plyr-react/plyr.css";
+// import "plyr-react/plyr.css";
+
+import "plyr/plyr.scss";
 
 import { useEffect, useRef } from "react";
 
 import Hls from "hls.js";
-import Plyr from "plyr-react";
+import Plyr from "plyr";
+import { cn } from "@/lib/utils";
 
 interface Props {
   thumbnailUrl: string;
   playlistUrl: string;
+  className?: string;
 }
 
 export default function VideoPlayer(props: Props) {
@@ -17,14 +21,19 @@ export default function VideoPlayer(props: Props) {
 
   useEffect(
     function () {
-      if (videoRef.current && Hls.isSupported()) {
+      if (!videoRef.current) return;
+      const player = new Plyr(videoRef.current!, {
+        controls: ["play", "progress", "current-time"],
+      });
+
+      if (Hls.isSupported()) {
         const hls = new Hls();
         console.log(props.playlistUrl);
         hls.loadSource(props.playlistUrl);
         hls.attachMedia(videoRef.current);
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          console.log("parsed");
           videoRef.current!.poster = props.thumbnailUrl;
+          console.log(videoRef.current);
         });
 
         return () => hls.destroy();
@@ -34,5 +43,11 @@ export default function VideoPlayer(props: Props) {
     [props.playlistUrl],
   );
 
-  return <video ref={videoRef} controls className="aspect-video"></video>;
+  return (
+    <video
+      ref={videoRef}
+      controls
+      className={cn("aspect-video", props.className)}
+    ></video>
+  );
 }

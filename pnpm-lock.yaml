@@ -107,6 +107,9 @@ importers:
       '@radix-ui/react-tooltip':
         specifier: ^1.2.8
         version: 1.2.8(@types/react-dom@19.2.1(@types/react@19.2.2))(@types/react@19.2.2)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@stripe/connect-js':
+        specifier: ^3.3.30
+        version: 3.3.30
       '@stripe/react-connect-js':
         specifier: ^3.3.30
         version: 3.3.30(@stripe/connect-js@3.3.30)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)

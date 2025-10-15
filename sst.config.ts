@@ -52,23 +52,39 @@ export default $config({
     /**
      * Setting up a S3 bucket to store videos.
      */
+    const { cloudfront } = await import("@pulumi/aws");
+    const originAccessIdentity = new cloudfront.OriginAccessIdentity(
+      "VididProOriginAccessIdentity",
+    );
     const s3 = new sst.aws.Bucket("S3", {
       policy: [
         {
           effect: "allow",
-          actions: ["s3:GetObject"],
-          principals: "*",
-          conditions: [
+          principals: [
             {
-              test: "ArnLike",
-              variable: "AWS:SourceArn",
-              values: [
-                `arn:aws:cloudfront::${process.env.AWS_ACCOUNT_ID}:distribution/*`,
-              ],
+              type: "aws",
+              identifiers: [originAccessIdentity.iamArn],
             },
           ],
+          paths: ["thumbnails/*"],
+          actions: ["s3:GetObject"],
         },
       ],
+    });
+
+    /**
+     * Setting up a PostgreSQL database to store data.
+     */
+    const db = new sst.aws.Postgres("DB", {
+      vpc: applicationVPC,
+      multiAz: true,
+      dev: {
+        host: "localhost",
+        database: "vididpro",
+        password: "password",
+        port: 5432,
+        username: "admin",
+      },
     });
 
     /**
@@ -77,12 +93,14 @@ export default $config({
     const videoProcessor = new sst.aws.Function("VideoProcessor", {
       copyFiles: [
         { from: "public/images/icon.png", to: "watermark.png" },
-        { from: "lambda/ffmpeg", to: "ffmpeg" },
+        { from: "lambdas/video-processor/ffmpeg", to: "ffmpeg" },
+        { from: "lambdas/video-processor/drizzle.ts", to: "drizzle.ts" },
+        { from: "lambdas/video-processor/app.schema.ts", to: "app.schema.ts" },
       ],
       architecture: "arm64",
-      link: [queue, s3],
-      handler: "lambda/ffmpeg.handler",
-      nodejs: { install: ["mime", "chalk"] },
+      link: [queue, s3, db],
+      handler: "lambdas/video-processor/index.handler",
+      nodejs: { install: ["mime", "chalk", "drizzle-orm"] },
     });
 
     /**
@@ -107,11 +125,6 @@ export default $config({
      * Setting up a CloudFront distribution to serve the videos
      * from the S3 bucket with minimal latency.
      */
-
-    const { cloudfront } = await import("@pulumi/aws");
-    const originAccessIdentity = new cloudfront.OriginAccessIdentity(
-      "VididProOriginAccessIdentity",
-    );
     const videosCdnOriginId = "VididProVideosCdn";
     const defaultCacheBehavior = {
       targetOriginId: videosCdnOriginId,
@@ -151,21 +164,6 @@ export default $config({
     });
 
     /**
-     * Setting up a PostgreSQL database to store data.
-     */
-    const db = new sst.aws.Postgres("DB", {
-      vpc: applicationVPC,
-      multiAz: true,
-      dev: {
-        host: "localhost",
-        database: "vididpro",
-        password: "password",
-        port: 5432,
-        username: "admin",
-      },
-    });
-
-    /**
      * Setting up the application.
      */
     new sst.aws.Nextjs("Application", {
@@ -176,5 +174,9 @@ export default $config({
         command: "npm run dev",
       },
     });
+
+    return {
+      oai: originAccessIdentity.iamArn,
+    };
   },
 });

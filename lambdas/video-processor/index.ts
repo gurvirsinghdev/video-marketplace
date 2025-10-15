@@ -5,11 +5,14 @@ import { ReadableStream } from "stream/web";
 import { S3 } from "@aws-sdk/client-s3";
 import { S3Event } from "aws-lambda";
 import chalk from "chalk";
+import { db } from "./drizzle";
+import { eq } from "drizzle-orm";
 import { execFile } from "child_process";
 import mime from "mime";
 import os from "os";
 import path from "path";
 import { promisify } from "util";
+import { videoTable } from "./app.schema";
 
 const exec = promisify(execFile);
 const s3 = new S3();
@@ -173,13 +176,14 @@ export const handler = async (event: SQSEvent) => {
       await generateThumbnail(paths.video, paths.thumbnail);
 
       logger.info("Uploading thumbnail...", "Handler");
-      await uploadToS3(
-        bucket,
-        `thumbnails/${path.basename(paths.thumbnail)}`,
-        paths.thumbnail,
-        "image/jpeg",
-      );
+      const thumbnailKey = `thumbnails/${path.basename(paths.thumbnail)}`;
+      await uploadToS3(bucket, thumbnailKey, paths.thumbnail, "image/jpeg");
 
+      logger.info("Updating the database...", "Handler");
+      db.update(videoTable)
+        .set({ thumbnail_key: thumbnailKey })
+        .where(eq(videoTable.original_key, path.parse(key).name))
+        .execute();
       logger.success(`Successfully processed: ${key}`, "Handler");
     } catch (err) {
       logger.error(

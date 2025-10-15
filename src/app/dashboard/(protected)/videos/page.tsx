@@ -3,10 +3,14 @@ import { getQueryClient, trpc } from "@/trpc/server";
 
 import DashboardVideosView from "@/views/dashboard/videos.page";
 
-export default async function DashboardVideosPage() {
+interface Props {
+  searchParams: Promise<Partial<{ page: string }>>;
+}
+export default async function DashboardVideosPage({ searchParams }: Props) {
   const queryClient = getQueryClient();
+  const page = Number((await searchParams).page) || 1;
   void queryClient.prefetchQuery(
-    trpc.video.listMyVideosPaginated.queryOptions(),
+    trpc.video.listMyVideosPaginated.queryOptions({ page }),
   );
 
   return (

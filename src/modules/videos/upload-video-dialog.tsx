@@ -19,6 +19,7 @@ import InputField from "../form/input-field";
 import SelectInputField from "../form/select-input";
 import TextareaField from "../form/textarea-field";
 import { toast } from "sonner";
+import { useSearchParams } from "next/navigation";
 import { useTRPC } from "@/trpc/client";
 
 interface Props {
@@ -45,6 +46,8 @@ export default function UploadVideoDialog(props: Props) {
   );
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
+  const page = Number(searchParams.get("page")) || 1;
 
   const createNewVideoMutation = useMutation(
     trpc.video.createNewVideo.mutationOptions({
@@ -54,9 +57,11 @@ export default function UploadVideoDialog(props: Props) {
       onSuccess() {
         toast.success("Upload Complete!", { id: "upload-file" });
         props.setOpen(false);
-        queryClient.invalidateQueries(
-          trpc.video.listMyVideosPaginated.queryOptions(),
-        );
+        setTimeout(() => {
+          queryClient.invalidateQueries(
+            trpc.video.listMyVideosPaginated.queryOptions({ page }),
+          );
+        }, 1000);
       },
     }),
   );

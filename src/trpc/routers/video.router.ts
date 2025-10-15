@@ -1,22 +1,18 @@
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import {
-  buildFileSchema,
-  buildPriceSchema,
-  buildStringSchema,
-} from "@/lib/utils";
+import { and, desc, eq, isNotNull, isNull, ne, sql } from "drizzle-orm";
+import { buildPriceSchema, buildStringSchema } from "@/lib/utils";
 import { createTRPCRouter, protectedProcedure } from "../init";
-import { enum_, object } from "valibot";
+import { enum_, number, object } from "valibot";
 
 import { Resource } from "sst";
 import { db } from "@/db/drizzle";
-import { eq } from "drizzle-orm";
+import { getCloudfrontUrl } from "@/lib/cloudfront";
 import { getSignedUrl as getS3SignedUrl } from "@aws-sdk/s3-request-presigner";
-import { getThumbnailUrl } from "@/lib/cloudfront";
-import path from "path";
 import { pipeThroughTRPCErrorHandler } from "./_app";
 import { videoTable } from "@/db/schemas/app.schema";
 
 const s3Client = new S3Client();
+const pageSize = 10;
 
 export const videoRouter = createTRPCRouter({
   generatePresignedUrl: protectedProcedure.query(async () =>
@@ -65,20 +61,35 @@ export const videoRouter = createTRPCRouter({
       }),
     ),
 
-  listMyVideosPaginated: protectedProcedure.query(async ({ ctx }) =>
-    pipeThroughTRPCErrorHandler(async () => {
-      const records = await db
-        .select()
-        .from(videoTable)
-        .where(eq(videoTable.user_email, ctx.auth.properties.email))
-        .execute();
+  listMyVideosPaginated: protectedProcedure
+    .input(object({ page: number() }))
+    .query(async ({ ctx, input }) =>
+      pipeThroughTRPCErrorHandler(async () => {
+        const [{ count }] = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(videoTable)
+          .execute();
 
-      return records.map(
-        ({ original_key, thumbnail_key, m3u8_key, ...record }) => ({
-          ...record,
-          thumbnail: getThumbnailUrl(original_key),
-        }),
-      );
-    }),
-  ),
+        const offset = (input.page - 1) * pageSize;
+        const records = await db
+          .select()
+          .from(videoTable)
+          .where(eq(videoTable.user_email, ctx.auth.properties.email))
+          .limit(pageSize)
+          .offset(offset)
+          .orderBy(desc(videoTable.created_at))
+          .execute();
+
+        return {
+          pageSize,
+          pages: Math.ceil(count / pageSize),
+          records: records.map(
+            ({ original_key, thumbnail_key, m3u8_key, ...record }) => ({
+              ...record,
+              thumbnail_key: getCloudfrontUrl(thumbnail_key!),
+            }),
+          ),
+        };
+      }),
+    ),
 });

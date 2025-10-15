@@ -13,7 +13,7 @@ export default function DashboardVideosView() {
   const [isUploadingVideo, setIsUploadingVideo] = useState<boolean>(false);
 
   return (
-    <DashboardPageContents>
+    <DashboardPageContents className="space-y-4">
       <DashboardPageHeader
         title="Upload Video"
         brief="Select a video file to upload and manage."

@@ -18,9 +18,9 @@ export default function VideoItem(props: Props) {
   return (
     <div className="hover:bg-muted/50 inline-block w-full cursor-pointer p-4 transition-colors">
       <div className="flex flex-row items-center gap-3 sm:space-x-4">
-        <Checkbox />
+        {/* <Checkbox /> */}
         <div className="flex-shrink-0">
-          <VideoThumbnail thumbnailUrl={props.video.thumbnail} />
+          <VideoThumbnail thumbnailUrl={props.video.thumbnail_key} />
         </div>
         <div className="min-w-0">
           <h3 className="truncate text-sm font-medium">{props.video.title}</h3>

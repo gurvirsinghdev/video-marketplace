@@ -1,8 +1,8 @@
 "use client";
 
+import { Loader2Icon, PlayIcon } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 
-import { Loader2Icon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface VideoThumbnailProps {
@@ -23,6 +23,8 @@ export function VideoThumbnail({
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+
+    if (new URL(thumbnailUrl).pathname == "/null") return;
 
     // Load the image
     const img = new Image();
@@ -53,24 +55,28 @@ export function VideoThumbnail({
             sizeClassName,
           )}
         >
-          <canvas
-            ref={canvasRef}
-            className={cn(
-              "absolute inset-0 h-12 w-20 object-cover",
-              sizeClassName,
+          <div className="relative">
+            <canvas
+              ref={canvasRef}
+              className={cn("h-12 w-20 object-cover", sizeClassName)}
+              width={80}
+              height={48}
+            />
+            {loaded && (
+              <div className="bg-background/50 absolute -top-1 -right-1 -bottom-1 -left-1"></div>
             )}
-            width={80}
-            height={48}
-          />
-          {loaded ? (
-            <div className="text-muted-foreground">
-              <Loader2Icon className="h-4 w-4 animate-spin" />
-            </div>
-          ) : (
-            <div className="text-muted-foreground flex items-center justify-center">
-              <Loader2Icon className="animate-spin" />
-            </div>
-          )}
+          </div>
+          <div className="absolute">
+            {loaded ? (
+              <div className="text-muted-foreground">
+                <PlayIcon className="text-mu h-4 w-4" />
+              </div>
+            ) : (
+              <div className="text-muted-foreground flex items-center justify-center">
+                <Loader2Icon className="animate-spin" />
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

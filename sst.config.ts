@@ -77,6 +77,7 @@ export default $config({
      */
     const db = new sst.aws.Postgres("DB", {
       vpc: applicationVPC,
+      version: "17.2",
       multiAz: true,
       dev: {
         host: "localhost",
@@ -112,6 +113,7 @@ export default $config({
         {
           queue,
           name: "ProcessVideo",
+          filterPrefix: "original/",
           events: ["s3:ObjectCreated:Put"],
         },
       ],
@@ -167,13 +169,15 @@ export default $config({
     /**
      * Setting up the application.
      */
-    new sst.aws.Nextjs("Application", {
+    const application = new sst.aws.Nextjs("Application", {
       vpc: applicationVPC,
       link: [auth, db, s3, linkableVideosCdn],
-      buildCommand: "npm run build",
       dev: {
         command: "npm run dev",
       },
     });
+    return {
+      application: application.url,
+    };
   },
 });

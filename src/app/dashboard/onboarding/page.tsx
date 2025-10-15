@@ -2,7 +2,7 @@
 
 import { CountryCodeEnum, CountryCodeToNameMap } from "@/config/stripe.config";
 import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
-import { enum_, minLength, object, pipe, string } from "valibot";
+import { enum_, object } from "valibot";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import BaseForm from "@/modules/form/base-form";

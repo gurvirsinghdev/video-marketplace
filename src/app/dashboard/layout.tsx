@@ -1,5 +1,5 @@
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query";
-import { Loader2Icon, LogOutIcon, SettingsIcon } from "lucide-react";
+import { LogOutIcon, SettingsIcon } from "lucide-react";
 import {
   SidebarMenu as ShadcnSidebarMenu,
   Sidebar,

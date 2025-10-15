@@ -1,7 +1,7 @@
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import { and, desc, eq, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import { buildPriceSchema, buildStringSchema } from "@/lib/utils";
 import { createTRPCRouter, protectedProcedure } from "../init";
+import { desc, eq, sql } from "drizzle-orm";
 import { enum_, number, object } from "valibot";
 
 import { Resource } from "sst";
@@ -84,6 +84,7 @@ export const videoRouter = createTRPCRouter({
           pageSize,
           pages: Math.ceil(count / pageSize),
           records: records.map(
+            // eslint-disable-next-line
             ({ original_key, thumbnail_key, m3u8_key, ...record }) => ({
               ...record,
               thumbnail_key: getCloudfrontUrl(thumbnail_key!),

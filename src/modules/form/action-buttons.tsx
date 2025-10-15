@@ -2,7 +2,6 @@
 
 import BaseLoader from "../base/loader";
 import FormButton from "./button";
-import { Loader2Icon } from "lucide-react";
 import { useBaseFormContext } from "./form-context";
 import { useFormContext } from "react-hook-form";
 

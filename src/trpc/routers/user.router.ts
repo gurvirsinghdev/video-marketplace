@@ -2,13 +2,12 @@ import {
   Configuration,
   getConnectedAccountUsingId,
 } from "@/sdk/stripe/get-connected-account-using-id";
-import { and, eq } from "drizzle-orm";
 import {
   createStripeMerchantAccount,
   extendBaseCreateCorePayload,
 } from "@/sdk/stripe/create-stripe-merchant-account";
 import { createTRPCRouter, protectedProcedure } from "../init";
-import { enum_, minLength, object, pipe, string } from "valibot";
+import { enum_, object } from "valibot";
 import {
   getStripeIntegrationByEmail,
   getUserByEmail,
@@ -20,6 +19,7 @@ import Stripe from "stripe";
 import { TRPCError } from "@trpc/server";
 import { buildStringSchema } from "@/lib/utils";
 import { db } from "@/db/drizzle";
+import { eq } from "drizzle-orm";
 import { pipeThroughTRPCErrorHandler } from "./_app";
 
 interface StripeIntegrationMetadata {

@@ -1,9 +1,9 @@
 "use client";
 
-import { Loader2Icon, PlayIcon } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 
 import BaseLoader from "../base/loader";
+import { PlayIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface VideoThumbnailProps {
@@ -45,6 +45,7 @@ export function VideoThumbnail({
     return () => {
       setLoaded(false);
     };
+    // eslint-disable-next-line
   }, [thumbnailUrl]);
 
   return (

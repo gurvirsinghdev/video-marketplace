@@ -7,7 +7,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { CountryCodeEnum, CountryCodeToNameMap } from "@/config/stripe.config";
-import { minLength, object, pipe, string } from "valibot";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import BaseForm from "@/modules/form/base-form";
@@ -19,11 +18,11 @@ import FormField from "@/modules/form/field";
 import Image from "next/image";
 import InputField from "@/modules/form/input-field";
 import { Label } from "@/components/ui/label";
-import { Loader2Icon } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { buildStringSchema } from "@/lib/utils";
 import dynamic from "next/dynamic";
+import { object } from "valibot";
 import { toast } from "sonner";
 import { useState } from "react";
 import { useTRPC } from "@/trpc/client";

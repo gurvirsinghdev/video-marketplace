@@ -1,5 +1,5 @@
 import { createReadStream, createWriteStream, existsSync } from "fs";
-import { exists, mkdir, readdir, rmdir, unlink } from "fs/promises";
+import { mkdir, readdir, rmdir, unlink } from "fs/promises";
 
 import { Readable } from "stream";
 import { ReadableStream } from "stream/web";

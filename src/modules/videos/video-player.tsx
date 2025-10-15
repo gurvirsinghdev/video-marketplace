@@ -22,7 +22,7 @@ export default function VideoPlayer(props: Props) {
   useEffect(
     function () {
       if (!videoRef.current) return;
-      const player = new Plyr(videoRef.current!, {
+      new Plyr(videoRef.current!, {
         controls: ["play", "progress", "current-time"],
       });
 

@@ -66,7 +66,7 @@ export default $config({
               identifiers: [originAccessIdentity.iamArn],
             },
           ],
-          paths: ["thumbnails/*"],
+          paths: ["thumbnails/*", "m3u8/*"],
           actions: ["s3:GetObject"],
         },
       ],

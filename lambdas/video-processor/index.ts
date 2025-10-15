@@ -1,4 +1,5 @@
 import { createReadStream, createWriteStream } from "fs";
+import { mkdir, readdir, rmdir, unlink } from "fs/promises";
 
 import { Readable } from "stream";
 import { ReadableStream } from "stream/web";
@@ -138,18 +139,64 @@ const getFileExtension = async (
 };
 
 const generateThumbnail = async (input: string, output: string) => {
+  await exec(
+    ffmpegPath,
+    `-i ${input} -ss 00:00:02 -vframes 1 -vf scale=320:-1 ${output}`.split(" "),
+  );
+  logger.success(`Thumbnail generated: ${output}`, "FFmpeg");
+};
+
+const convertToHLS = async (
+  input: string,
+  outputDir: string,
+  playlistPath: string,
+) => {
+  await mkdir(outputDir);
   await exec(ffmpegPath, [
     "-i",
     input,
-    "-ss",
-    "00:00:02",
-    "-vframes",
-    "1",
     "-vf",
-    "scale=320:-1",
-    output,
+    "scale=iw:480",
+    "-c:a",
+    "aac",
+    "-b:a",
+    "128k",
+    "-c:v",
+    "libx264",
+    "-crf",
+    "23",
+    "-preset",
+    "fast",
+    "-f",
+    "hls",
+    "-hls_time",
+    "10",
+    "-hls_list_size",
+    "0",
+    "-hls_segment_filename",
+    path.join(outputDir, path.basename(playlistPath) + "_segment_%03d.ts"),
+    playlistPath,
   ]);
-  logger.success(`Thumbnail generated: ${output}`, "FFmpeg");
+
+  logger.success(`HLS conversion completed: ${playlistPath}`, "FFmpeg");
+  return outputDir;
+};
+
+const uploadHLSDirectoryToS3 = async (
+  bucket: string,
+  dirPath: string,
+  s3Prefix: string,
+) => {
+  const ctx = "Upload-HLS";
+  const files = await readdir(dirPath);
+
+  for (const file of files) {
+    const filePath = path.join(dirPath, file);
+    const s3Key = path.join(s3Prefix, file).replace(/\\/g, "/");
+
+    await uploadToS3(bucket, s3Key, filePath);
+    logger.info(`Uploaded HLS file: ${s3Key}`, ctx);
+  }
 };
 
 export const handler = async (event: SQSEvent) => {
@@ -165,10 +212,10 @@ export const handler = async (event: SQSEvent) => {
       continue;
     }
 
-    try {
-      const ext = await getFileExtension(bucket, key);
-      const paths = getTempPaths(key, ext);
+    const ext = await getFileExtension(bucket, key);
+    const paths = getTempPaths(key, ext);
 
+    try {
       logger.info(`Downloading video: ${key}`, "Handler");
       await downloadFromS3(bucket, key, paths.video);
 
@@ -179,9 +226,23 @@ export const handler = async (event: SQSEvent) => {
       const thumbnailKey = `thumbnails/${path.basename(paths.thumbnail)}`;
       await uploadToS3(bucket, thumbnailKey, paths.thumbnail, "image/jpeg");
 
+      logger.info("Converting to HLS 480p...", "Handler");
+      const baseName = path.basename(paths.video) + "_segments";
+      const outputDir = path.join(path.dirname(paths.playlist), baseName);
+      const segmentsDir = await convertToHLS(
+        paths.video,
+        outputDir,
+        paths.playlist,
+      );
+
+      logger.info("Uploading M3U8 playlist...", "Handler");
+      const playlistKey = `m3u8/${path.basename(paths.playlist)}`;
+      await uploadToS3(bucket, playlistKey, paths.playlist);
+      await uploadHLSDirectoryToS3(bucket, segmentsDir, "m3u8");
+
       logger.info("Updating the database...", "Handler");
       db.update(videoTable)
-        .set({ thumbnail_key: thumbnailKey })
+        .set({ thumbnail_key: thumbnailKey, m3u8_key: playlistKey })
         .where(eq(videoTable.original_key, path.parse(key).name))
         .execute();
       logger.success(`Successfully processed: ${key}`, "Handler");
@@ -190,6 +251,13 @@ export const handler = async (event: SQSEvent) => {
         `Failed processing ${key}: ${(err as Error).message}`,
         "Handler",
       );
+    } finally {
+      logger.info("Unlinking local files...", "Hanlder");
+      await Promise.all([...Object.values(paths)].map((p) => unlink(p)));
+      const baseName = path.basename(paths.video) + "_segments";
+      const outputDir = path.join(path.dirname(paths.playlist), baseName);
+      await rmdir(outputDir, { recursive: true });
+      logger.info("Deleted local files", "Handler");
     }
   }
 };

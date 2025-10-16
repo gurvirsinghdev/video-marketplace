@@ -111,12 +111,16 @@ export default $config({
     /**
      * Setting up a Lambda function to process videos.
      */
+    const videoProcessorPath = "lambdas/video-processor";
     const videoProcessor = new sst.aws.Function("VideoProcessor", {
       copyFiles: [
-        { from: "public/images/icon.png", to: "watermark.png" },
-        { from: "lambdas/video-processor/ffmpeg-arm64", to: "ffmpeg-arm64" },
-        { from: "lambdas/video-processor/drizzle.ts", to: "drizzle.ts" },
-        { from: "lambdas/video-processor/app.schema.ts", to: "app.schema.ts" },
+        { from: videoProcessorPath + "/watermark.png", to: "watermark.png" },
+        {
+          from: `${videoProcessorPath}/ffmpeg-${$app.stage != "prod" ? "m" : "arm64"}`,
+          to: "ffmpeg-arm64",
+        },
+        { from: videoProcessorPath + "/drizzle.ts", to: "drizzle.ts" },
+        { from: videoProcessorPath + "/app.schema.ts", to: "app.schema.ts" },
       ],
       architecture: "arm64",
       link: [queue, s3, db],

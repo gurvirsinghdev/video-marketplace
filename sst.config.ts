@@ -11,6 +11,9 @@ export default $config({
         aws: {
           region: "ap-south-1",
         },
+        cloudflare: {
+          apiToken: process.env.CLOUDFLARE_API_TOKEN!,
+        },
       },
     };
   },
@@ -29,6 +32,11 @@ export default $config({
           instance: "t4g.micro",
         },
       },
+      transform: {
+        natInstance: {
+          associatePublicIpAddress: true,
+        },
+      },
     });
 
     /**
@@ -42,6 +50,10 @@ export default $config({
           MAILGUN_SENDING_KEY: process.env.MAILGUN_SENDING_KEY!,
         },
       },
+      domain:
+        $app.stage != "prod"
+          ? undefined
+          : { name: "auth.yoursite.live", dns: sst.cloudflare.dns() },
     });
 
     /**
@@ -78,13 +90,21 @@ export default $config({
     const db = new sst.aws.Postgres("DB", {
       vpc: applicationVPC,
       version: "17.2",
-      multiAz: true,
+      multiAz: false,
       dev: {
         host: "localhost",
         database: "vididpro",
         password: "password",
         port: 5432,
         username: "admin",
+      },
+      transform: {
+        instance: {
+          publiclyAccessible: true,
+        },
+        subnetGroup: {
+          subnetIds: applicationVPC.publicSubnets,
+        },
       },
     });
 
@@ -94,15 +114,16 @@ export default $config({
     const videoProcessor = new sst.aws.Function("VideoProcessor", {
       copyFiles: [
         { from: "public/images/icon.png", to: "watermark.png" },
-        { from: "lambdas/video-processor/ffmpeg", to: "ffmpeg" },
+        { from: "lambdas/video-processor/ffmpeg-arm64", to: "ffmpeg-arm64" },
         { from: "lambdas/video-processor/drizzle.ts", to: "drizzle.ts" },
         { from: "lambdas/video-processor/app.schema.ts", to: "app.schema.ts" },
       ],
       architecture: "arm64",
       link: [queue, s3, db],
       handler: "lambdas/video-processor/index.handler",
-      timeout: "15 minutes",
-      nodejs: { install: ["mime", "chalk", "drizzle-orm"] },
+      memory: "4096 MB",
+      timeout: "30 seconds",
+      nodejs: { install: ["mime", "chalk", "drizzle-orm", "pg"] },
     });
 
     /**
@@ -169,15 +190,23 @@ export default $config({
     /**
      * Setting up the application.
      */
-    const application = new sst.aws.Nextjs("Application", {
+    new sst.aws.Nextjs("Application", {
       vpc: applicationVPC,
       link: [auth, db, s3, linkableVideosCdn],
+      domain:
+        $app.stage != "prod"
+          ? undefined
+          : { name: "yoursite.live", dns: sst.cloudflare.dns() },
+      environment: {
+        NODE_ENV: $app.stage != "prod" ? "development" : "production",
+      },
+      server: {
+        architecture: "arm64",
+        install: ["pg"],
+      },
       dev: {
         command: "npm run dev",
       },
     });
-    return {
-      application: application.url,
-    };
   },
 });

@@ -3,6 +3,7 @@ import { TRPCError, initTRPC } from "@trpc/server";
 import SuperJSON from "superjson";
 import { cache } from "react";
 import { getAuth } from "@/auth/actions";
+import { getDB } from "@/db/drizzle";
 import { pipeThroughTRPCErrorHandler } from "./routers/_app";
 
 export const createTRPCContext = cache(async () => {
@@ -38,4 +39,17 @@ export const protectedProcedure = t.procedure.use(
       });
     }),
   ),
+);
+
+export const protectedDBProcedure = protectedProcedure.use(
+  t.middleware(async ({ ctx, next }) => {
+    const db = await getDB();
+    return next({
+      ctx: {
+        ...ctx,
+        auth: ctx.auth!,
+        db,
+      },
+    });
+  }),
 );

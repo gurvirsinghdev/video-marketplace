@@ -6,9 +6,9 @@ import { ReadableStream } from "stream/web";
 import { S3 } from "@aws-sdk/client-s3";
 import { S3Event } from "aws-lambda";
 import chalk from "chalk";
-import { db } from "./drizzle";
 import { eq } from "drizzle-orm";
 import { execFile } from "child_process";
+import { getDB } from "./drizzle";
 import mime from "mime";
 import os from "os";
 import path from "path";
@@ -17,7 +17,7 @@ import { videoTable } from "./app.schema";
 
 const exec = promisify(execFile);
 const s3 = new S3();
-const ffmpegPath = path.resolve(__dirname, "ffmpeg");
+const ffmpegPath = path.resolve(__dirname, "ffmpeg-arm64", "ffmpeg");
 
 type LogLevel = "info" | "warn" | "error" | "success" | "debug";
 
@@ -248,6 +248,7 @@ export const handler = async (event: SQSEvent) => {
       await uploadHLSDirectoryToS3(bucket, segmentsDir, "m3u8");
 
       logger.info("Updating the database...", "Handler");
+      const { db } = await getDB();
       db.update(videoTable)
         .set({ thumbnail_key: thumbnailKey, m3u8_key: playlistKey })
         .where(eq(videoTable.original_key, path.parse(key).name))

@@ -3,10 +3,10 @@
 import { and, eq } from "drizzle-orm";
 import { integrationTable, userTable } from "@/db/schemas/app.schema";
 
+import { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { TRPCError } from "@trpc/server";
-import { db } from "@/db/drizzle";
 
-export const getUserByEmail = async (email: string) => {
+export const getUserByEmail = async (db: NodePgDatabase, email: string) => {
   const [user] = await db
     .select()
     .from(userTable)
@@ -19,11 +19,13 @@ export const getUserByEmail = async (email: string) => {
       message: "Unable to verify account. Please log out and log back in.",
     });
   }
-
   return user;
 };
 
-export const getStripeIntegrationByEmail = async (email: string) => {
+export const getStripeIntegrationByEmail = async (
+  db: NodePgDatabase,
+  email: string,
+) => {
   const [integration] = await db
     .select()
     .from(integrationTable)

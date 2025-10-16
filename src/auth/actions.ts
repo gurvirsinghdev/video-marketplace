@@ -33,6 +33,11 @@ const getOpenAuthCookies = async function () {
     );
 };
 
+export async function redirectToOpenAuthServer() {
+  const url = await getOpenAuthServerUrl();
+  redirect(url);
+}
+
 export async function getAuth() {
   const { access_token, refresh_token } = await getOpenAuthCookies();
   if (!access_token) {
@@ -52,7 +57,7 @@ export async function getAuth() {
   return verified.subject;
 }
 
-export async function getIssuerUrl() {
+export async function getOpenAuthServerUrl() {
   const headers = await getHeaders();
   const host = headers.get("host");
   const { url } = await client.authorize(
@@ -82,7 +87,7 @@ export async function requireAuthorization(config: {
   }
 
   if (config.redirectIfUnAuthorized) {
-    redirect(await getIssuerUrl());
+    redirect(await getOpenAuthServerUrl());
   }
   return false;
 }

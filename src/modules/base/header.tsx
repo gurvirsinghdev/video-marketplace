@@ -8,19 +8,14 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { redirect, usePathname } from "next/navigation";
 
 import AppLogo from "./app-logo";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { MenuIcon } from "lucide-react";
-import { getIssuerUrl } from "@/auth/actions";
+import { redirectToOpenAuthServer } from "@/auth/actions";
 import { useAuthQuery } from "@/hooks/use-auth";
-
-async function redirectToIssuer() {
-  const url = await getIssuerUrl();
-  redirect(url);
-}
+import { usePathname } from "next/navigation";
 
 export default function Header() {
   const authQuery = useAuthQuery();
@@ -64,13 +59,13 @@ export default function Header() {
             ) : (
               <>
                 <button
-                  onClick={redirectToIssuer}
+                  onClick={redirectToOpenAuthServer}
                   className="bg-accent dark:bg-card hover:bg-background focus:bg-background cursor-pointer border-l p-8 transition-colors"
                 >
                   Sign In
                 </button>
                 <button
-                  onClick={redirectToIssuer}
+                  onClick={redirectToOpenAuthServer}
                   className="bg-accent dark:bg-card hover:bg-background focus:bg-background cursor-pointer border-l p-8 transition-colors"
                 >
                   Start Selling
@@ -117,7 +112,7 @@ export default function Header() {
               ).map((label) => (
                 <Button
                   key={label}
-                  onClick={redirectToIssuer}
+                  onClick={redirectToOpenAuthServer}
                   variant={"outline"}
                   className="w-full cursor-pointer rounded-none p-5! capitalize"
                 >

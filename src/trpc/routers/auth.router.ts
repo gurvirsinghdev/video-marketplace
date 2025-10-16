@@ -1,6 +1,5 @@
-import { baseProcedure, createTRPCRouter, protectedProcedure } from "../init";
+import { baseProcedure, createTRPCRouter, protectedDBProcedure } from "../init";
 
-import { db } from "@/db/drizzle";
 import { eq } from "drizzle-orm";
 import { getAuth } from "@/auth/actions";
 import { pipeThroughTRPCErrorHandler } from "./_app";
@@ -13,15 +12,14 @@ export const authRouter = createTRPCRouter({
     }),
   ),
 
-  getAuthenticatedUser: protectedProcedure.query(({ ctx }) =>
+  getAuthenticatedUser: protectedDBProcedure.query(({ ctx }) =>
     pipeThroughTRPCErrorHandler(async () => {
-      const [dbUser] = await db
+      const [dbUser] = await ctx.db
         .select()
         .from(userTable)
         .where(eq(userTable.email, ctx.auth.properties.email))
         .limit(1)
         .execute();
-
       return dbUser ?? null;
     }),
   ),

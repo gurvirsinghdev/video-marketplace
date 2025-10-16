@@ -3,7 +3,7 @@ import { createClient } from "@openauthjs/openauth";
 import { cookies as getCookies } from "next/headers";
 
 export const client = createClient({
-  clientID: "VididProApplication",
+  clientID: "Application",
   issuer: Resource.OpenAuth.url,
 });
 

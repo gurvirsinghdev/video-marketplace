@@ -1,11 +1,14 @@
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { buildPriceSchema, buildStringSchema } from "@/lib/utils";
-import { createTRPCRouter, protectedProcedure } from "../init";
+import {
+  createTRPCRouter,
+  protectedDBProcedure,
+  protectedProcedure,
+} from "../init";
 import { desc, eq, sql } from "drizzle-orm";
 import { enum_, number, object } from "valibot";
 
 import { Resource } from "sst";
-import { db } from "@/db/drizzle";
 import { getCloudfrontUrl } from "@/lib/cloudfront";
 import { getSignedUrl as getS3SignedUrl } from "@aws-sdk/s3-request-presigner";
 import { pipeThroughTRPCErrorHandler } from "./_app";
@@ -33,7 +36,7 @@ export const videoRouter = createTRPCRouter({
     }),
   ),
 
-  createNewVideo: protectedProcedure
+  createNewVideo: protectedDBProcedure
     .input(
       object({
         title: buildStringSchema("Title"),
@@ -46,7 +49,7 @@ export const videoRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) =>
       pipeThroughTRPCErrorHandler(async () => {
-        await db
+        await ctx.db
           .insert(videoTable)
           .values({
             description: input.description,
@@ -61,17 +64,17 @@ export const videoRouter = createTRPCRouter({
       }),
     ),
 
-  listMyVideosPaginated: protectedProcedure
+  listMyVideosPaginated: protectedDBProcedure
     .input(object({ page: number() }))
     .query(async ({ ctx, input }) =>
       pipeThroughTRPCErrorHandler(async () => {
-        const [{ count }] = await db
+        const [{ count }] = await ctx.db
           .select({ count: sql<number>`count(*)` })
           .from(videoTable)
           .execute();
 
         const offset = (input.page - 1) * pageSize;
-        const records = await db
+        const records = await ctx.db
           .select()
           .from(videoTable)
           .where(eq(videoTable.user_email, ctx.auth.properties.email))

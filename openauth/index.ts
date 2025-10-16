@@ -13,6 +13,7 @@ const mailgun = new Mailgun(FormData).client({
 
 const app = issuer({
   subjects,
+  allow: async () => true,
   providers: {
     password: PasswordProvider(
       PasswordUI({

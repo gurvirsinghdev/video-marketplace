@@ -6,7 +6,7 @@ import {
   createStripeMerchantAccount,
   extendBaseCreateCorePayload,
 } from "@/sdk/stripe/create-stripe-merchant-account";
-import { createTRPCRouter, protectedProcedure } from "../init";
+import { createTRPCRouter, protectedDBProcedure } from "../init";
 import { enum_, object } from "valibot";
 import {
   getStripeIntegrationByEmail,
@@ -18,7 +18,6 @@ import { CountryCodeEnum } from "@/config/stripe.config";
 import Stripe from "stripe";
 import { TRPCError } from "@trpc/server";
 import { buildStringSchema } from "@/lib/utils";
-import { db } from "@/db/drizzle";
 import { eq } from "drizzle-orm";
 import { pipeThroughTRPCErrorHandler } from "./_app";
 
@@ -31,7 +30,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 // Main user router
 export const userRouter = createTRPCRouter({
-  finishOnboarding: protectedProcedure
+  finishOnboarding: protectedDBProcedure
     .input(
       object({
         name: buildStringSchema([
@@ -60,7 +59,7 @@ export const userRouter = createTRPCRouter({
     )
     .mutation(({ input, ctx }) =>
       pipeThroughTRPCErrorHandler(async () => {
-        await db
+        await ctx.db
           .update(userTable)
           .set({
             name: input.name,
@@ -75,7 +74,7 @@ export const userRouter = createTRPCRouter({
       }),
     ),
 
-  updateAccountDetails: protectedProcedure
+  updateAccountDetails: protectedDBProcedure
     .input(
       object({
         name: buildStringSchema([
@@ -86,7 +85,7 @@ export const userRouter = createTRPCRouter({
     )
     .mutation(async ({ input, ctx }) =>
       pipeThroughTRPCErrorHandler(async () => {
-        await db
+        await ctx.db
           .update(userTable)
           .set({
             name: input.name,
@@ -97,16 +96,17 @@ export const userRouter = createTRPCRouter({
       }),
     ),
 
-  enableStripeIntegration: protectedProcedure.mutation(async ({ ctx }) =>
+  enableStripeIntegration: protectedDBProcedure.mutation(async ({ ctx }) =>
     pipeThroughTRPCErrorHandler(async () => {
       const integration = await getStripeIntegrationByEmail(
+        ctx.db,
         ctx.auth.properties.email,
       );
 
       let metadata: Partial<StripeIntegrationMetadata> = {};
 
       if (!integration) {
-        const user = await getUserByEmail(ctx.auth.properties.email);
+        const user = await getUserByEmail(ctx.db, ctx.auth.properties.email);
 
         // Create Stripe Merchant Account
         const { id } = await createStripeMerchantAccount(
@@ -129,7 +129,7 @@ export const userRouter = createTRPCRouter({
         };
 
         // Insert integration into DB
-        await db
+        await ctx.db
           .insert(integrationTable)
           .values({
             user_email: ctx.auth.properties.email,
@@ -142,18 +142,16 @@ export const userRouter = createTRPCRouter({
         metadata = integration.metadata as Partial<StripeIntegrationMetadata>;
 
         if (!metadata.account_id) {
-          if (!metadata.account_id) {
-            await db
-              .delete(integrationTable)
-              .where(eq(integrationTable.id, integration.id))
-              .execute();
+          await ctx.db
+            .delete(integrationTable)
+            .where(eq(integrationTable.id, integration.id))
+            .execute();
 
-            throw new TRPCError({
-              code: "INTERNAL_SERVER_ERROR",
-              message:
-                "Unable to link Stripe account. Please try reconnecting from the dashboard.",
-            });
-          }
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message:
+              "Unable to link Stripe account. Please try reconnecting from the dashboard.",
+          });
         }
 
         const connectedAccount = await getConnectedAccountUsingId(
@@ -166,7 +164,7 @@ export const userRouter = createTRPCRouter({
         const stripeOnboarded = stripeStatus === "active";
 
         // Update integration status
-        await db
+        await ctx.db
           .update(integrationTable)
           .set({
             active: stripeOnboarded,
@@ -199,9 +197,10 @@ export const userRouter = createTRPCRouter({
     }),
   ),
 
-  syncStripeAccountStatus: protectedProcedure.mutation(async ({ ctx }) =>
+  syncStripeAccountStatus: protectedDBProcedure.mutation(async ({ ctx }) =>
     pipeThroughTRPCErrorHandler(async () => {
       const integration = await getStripeIntegrationByEmail(
+        ctx.db,
         ctx.auth.properties.email,
       );
 
@@ -215,7 +214,7 @@ export const userRouter = createTRPCRouter({
       const metadata = integration.metadata as StripeIntegrationMetadata;
 
       if (!metadata.account_id) {
-        await db
+        await ctx.db
           .delete(integrationTable)
           .where(eq(integrationTable.id, integration.id))
           .execute();
@@ -231,15 +230,11 @@ export const userRouter = createTRPCRouter({
         metadata.account_id,
       );
 
-      console.log(
-        connectedAccount.configuration.merchant.capabilities.card_payments,
-      );
-
       if (
         connectedAccount.configuration.merchant.capabilities.card_payments
           .status === "active"
       ) {
-        await db
+        await ctx.db
           .update(integrationTable)
           .set({
             active: true,
@@ -252,18 +247,20 @@ export const userRouter = createTRPCRouter({
           .execute();
         return true;
       }
+
       return false;
     }),
   ),
 
-  disableStripeIntegration: protectedProcedure.mutation(async ({ ctx }) =>
+  disableStripeIntegration: protectedDBProcedure.mutation(async ({ ctx }) =>
     pipeThroughTRPCErrorHandler(async () => {
       const integration = await getStripeIntegrationByEmail(
+        ctx.db,
         ctx.auth.properties.email,
       );
       if (!integration) return;
 
-      await db
+      await ctx.db
         .update(integrationTable)
         .set({
           active: false,
@@ -274,9 +271,9 @@ export const userRouter = createTRPCRouter({
     }),
   ),
 
-  getLinkedServices: protectedProcedure.query(async ({ ctx }) =>
+  getLinkedServices: protectedDBProcedure.query(async ({ ctx }) =>
     pipeThroughTRPCErrorHandler(async () => {
-      const integrations = await db
+      const integrations = await ctx.db
         .select()
         .from(integrationTable)
         .where(eq(integrationTable.user_email, ctx.auth.properties.email))

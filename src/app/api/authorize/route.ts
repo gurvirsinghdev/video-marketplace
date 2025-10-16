@@ -1,7 +1,7 @@
 import { client, setOpenAuthCookies } from "@/auth";
 import { type NextRequest, NextResponse } from "next/server";
 import { subjects } from "../../../../openauth/subjects";
-import { db } from "@/db/drizzle";
+import { getDB } from "@/db/drizzle";
 import { userTable } from "@/db/schemas/app.schema";
 
 export async function GET(req: NextRequest) {
@@ -17,12 +17,14 @@ export async function GET(req: NextRequest) {
     refresh: exchanged.tokens.refresh,
   });
   if (!verified.err) {
+    const db = await getDB();
     await db
       .insert(userTable)
       .values({
         email: verified.subject.properties.email,
       })
-      .onConflictDoNothing();
+      .onConflictDoNothing({ target: userTable.email })
+      .execute();
   }
 
   return NextResponse.redirect(`${url.origin}/dashboard`);

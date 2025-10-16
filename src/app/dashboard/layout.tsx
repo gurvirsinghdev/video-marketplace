@@ -11,7 +11,8 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { getQueryClient, trpc } from "@/trpc/server";
+import { caller, getQueryClient, trpc } from "@/trpc/server";
+import { getOpenAuthServerUrl, logout } from "@/auth/actions";
 
 import BaseLoader from "@/modules/base/loader";
 import DashboardBreadcrumbs from "../../modules/dashboard/breadcrumbs";
@@ -19,11 +20,15 @@ import DashboardUserAvatar from "../../modules/dashboard/user-avatar";
 import Link from "next/link";
 import SidebarMenu from "../../modules/dashboard/sidebar-menu";
 import { Suspense } from "react";
-import { logout } from "@/auth/actions";
+import { redirect } from "next/navigation";
 
 export default async function DashboardLayout(
   props: Readonly<{ children: React.ReactNode }>,
 ) {
+  const openAuthUser = await caller.auth.getAuthState();
+  if (!openAuthUser) {
+    redirect(await getOpenAuthServerUrl());
+  }
   const queryClient = getQueryClient();
   void queryClient.prefetchQuery(trpc.auth.getAuthenticatedUser.queryOptions());
 

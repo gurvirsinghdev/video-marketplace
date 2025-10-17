@@ -1,4 +1,5 @@
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
 import { array, enum_, number, object, string } from "valibot";
 import { buildPriceSchema, buildStringSchema } from "@/lib/utils";
 import {
@@ -6,7 +7,6 @@ import {
   protectedDBProcedure,
   protectedProcedure,
 } from "../init";
-import { desc, eq, sql } from "drizzle-orm";
 import { tagTable, videoTable, videoTagTable } from "@/db/schemas/app.schema";
 
 import { Resource } from "sst";
@@ -135,4 +135,45 @@ export const videoRouter = createTRPCRouter({
           };
         }),
     ),
+  listTopVideos: protectedDBProcedure.query(async ({ ctx }) =>
+    pipeThroughTRPCErrorHandler(async () => {
+      const records = await ctx.db
+        .select()
+        .from(videoTable)
+        .where(
+          and(
+            isNotNull(videoTable.thumbnail_key),
+            isNotNull(videoTable.m3u8_key),
+          ),
+        )
+        .limit(12)
+        .execute();
+
+      return records.map((record) => ({
+        ...record,
+        thumbnail_key: getCloudfrontUrl(record.thumbnail_key),
+        m3u8_key: getCloudfrontUrl(record.m3u8_key),
+      }));
+    }),
+  ),
+  listPublishedVideos: protectedDBProcedure.query(async ({ ctx }) =>
+    pipeThroughTRPCErrorHandler(async () => {
+      const records = await ctx.db
+        .select()
+        .from(videoTable)
+        .where(
+          and(
+            isNotNull(videoTable.thumbnail_key),
+            isNotNull(videoTable.m3u8_key),
+          ),
+        )
+        .execute();
+
+      return records.map((record) => ({
+        ...record,
+        thumbnail_key: getCloudfrontUrl(record.thumbnail_key),
+        m3u8_key: getCloudfrontUrl(record.m3u8_key),
+      }));
+    }),
+  ),
 });

@@ -24,6 +24,7 @@ export default function Header() {
   const appRoutes: Map<string, string> = new Map([
     ["home", "/"],
     ["about Us", "/about-us"],
+    ["explore", "/explore"],
     ["contact us", "/contact-us"],
   ]);
 

@@ -4,7 +4,7 @@ export default function MainLayout(
   props: Readonly<{ children: React.ReactNode }>,
 ) {
   return (
-    <main className="bg-secondary h-full min-h-screen w-full">
+    <main className="bg-card h-full min-h-screen w-full">
       <Header />
       {props.children}
     </main>

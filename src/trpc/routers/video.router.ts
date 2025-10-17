@@ -10,6 +10,7 @@ import {
 import { tagTable, videoTable, videoTagTable } from "@/db/schemas/app.schema";
 
 import { Resource } from "sst";
+import { TRPCError } from "@trpc/server";
 import { getCloudfrontUrl } from "@/lib/cloudfront";
 import { getSignedUrl as getS3SignedUrl } from "@aws-sdk/s3-request-presigner";
 import { pipeThroughTRPCErrorHandler } from "./_app";
@@ -176,4 +177,37 @@ export const videoRouter = createTRPCRouter({
       }));
     }),
   ),
+  getVideoById: protectedDBProcedure
+    .input(object({ id: string() }))
+    .query(async ({ ctx, input }) =>
+      pipeThroughTRPCErrorHandler(async () => {
+        const [record] = await ctx.db
+          .select()
+          .from(videoTable)
+          .where(
+            and(
+              eq(videoTable.id, input.id),
+              and(
+                isNotNull(videoTable.thumbnail_key),
+                isNotNull(videoTable.m3u8_key),
+              ),
+            ),
+          )
+          .limit(1)
+          .execute();
+
+        if (!record) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "The requested video is not found!",
+          });
+        }
+
+        return {
+          ...record,
+          thumbnail_key: getCloudfrontUrl(record.thumbnail_key),
+          m3u8_key: getCloudfrontUrl(record.m3u8_key),
+        };
+      }),
+    ),
 });

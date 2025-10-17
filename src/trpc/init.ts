@@ -22,34 +22,35 @@ export const createTRPCRouter = t.router;
 export const baseProcedure = t.procedure;
 
 export const protectedProcedure = t.procedure.use(
-  t.middleware(({ ctx, next }) =>
-    pipeThroughTRPCErrorHandler(async () => {
-      if (!ctx.auth) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "You are not authorized to access this resource.",
-        });
-      }
+  t.middleware(
+    async ({ ctx, next }) =>
+      await pipeThroughTRPCErrorHandler(async () => {
+        if (!ctx.auth) {
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: "You are not authorized to access this resource.",
+          });
+        }
 
-      return next({
-        ctx: {
-          ...ctx,
-          auth: ctx.auth!,
-        },
-      });
-    }),
+        return next({
+          ctx: {
+            ...ctx,
+            auth: ctx.auth!,
+          },
+        });
+      }),
   ),
 );
 
-export const protectedDBProcedure = protectedProcedure.use(
-  t.middleware(async ({ ctx, next }) => {
-    const db = await getDB();
-    return next({
-      ctx: {
-        ...ctx,
-        auth: ctx.auth!,
-        db,
-      },
-    });
-  }),
-);
+const dbMiddleware = t.middleware(async ({ ctx, next }) => {
+  const db = await getDB();
+  return next({
+    ctx: {
+      ...ctx,
+      auth: ctx.auth!,
+      db,
+    },
+  });
+});
+export const baseProcedureWithDB = baseProcedure.use(dbMiddleware);
+export const protectedDBProcedure = protectedProcedure.use(dbMiddleware);

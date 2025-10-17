@@ -2,7 +2,7 @@
 
 import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
 import { Dispatch, SetStateAction, useCallback, useState } from "react";
-import { InferOutput, enum_, object } from "valibot";
+import { InferOutput, array, enum_, object, string } from "valibot";
 import {
   buildFileSchema,
   buildPriceSchema,
@@ -17,6 +17,7 @@ import FormActionButtons from "../form/action-buttons";
 import FormField from "../form/field";
 import InputField from "../form/input-field";
 import SelectInputField from "../form/select-input";
+import TagField from "../form/tag-field";
 import TextareaField from "../form/textarea-field";
 import { toast } from "sonner";
 import { useSearchParams } from "next/navigation";
@@ -34,7 +35,7 @@ const uploadSchema = object({
   status: enum_({
     draft: "draft",
   }),
-  tags: buildStringSchema("Tags"),
+  tags: array(string()),
   price: buildPriceSchema(),
   file: buildFileSchema(),
 });
@@ -44,6 +45,8 @@ export default function UploadVideoDialog(props: Props) {
   const generateUploadUrlQuery = useQuery(
     trpc.video.generatePresignedUrl.queryOptions(undefined, { enabled: false }),
   );
+  const getAllTags = useQuery(trpc.tags.getAllTags.queryOptions());
+
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
@@ -146,7 +149,7 @@ export default function UploadVideoDialog(props: Props) {
             defaultValues={{
               description: "",
               price: "",
-              tags: "",
+              tags: [],
               title: "",
               // @ts-expect-error Because the user has not uploaded a file yet.
               file: undefined,
@@ -198,9 +201,12 @@ export default function UploadVideoDialog(props: Props) {
             <FormField<typeof uploadSchema>
               name="tags"
               render={(field) => (
-                <InputField
-                  {...field}
-                  placeholder="Enter comma separated tags for the video"
+                <TagField
+                  onValueChange={field.onChange}
+                  tags={(getAllTags.data || []).map((tag) => ({
+                    id: tag.id,
+                    label: tag.label,
+                  }))}
                 />
               )}
             />

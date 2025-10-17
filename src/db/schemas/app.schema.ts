@@ -1,5 +1,6 @@
 import {
   boolean,
+  integer,
   json,
   pgEnum,
   pgTable,
@@ -69,7 +70,6 @@ export const videoTable = pgTable(
     thumbnail_key: varchar("thumbnail_key"),
     m3u8_key: varchar("m3u8_key"),
     status: videoStatusEnum().notNull().default("draft"),
-    tags: varchar("tags"),
     price: varchar("price").notNull(),
     created_at: timestamp("created_at").defaultNow().notNull(),
     updated_at: timestamp("updated_at"),
@@ -77,6 +77,25 @@ export const videoTable = pgTable(
   },
   (t) => [primaryKey({ columns: [t.id] })],
 );
+
+export const tagTable = pgTable(
+  "vididpro_tag",
+  {
+    id: uuid("id").notNull().defaultRandom(),
+    label: varchar("label").notNull().unique(),
+    slug: varchar("slug").notNull().unique(),
+    description: varchar("description"),
+    tag_usage_count: integer("tag_usage_count").notNull().default(0),
+    created_at: timestamp("created_at").notNull().defaultNow(),
+    updated_at: timestamp("updated_at"),
+  },
+  (t) => [primaryKey({ columns: [t.id] })],
+);
+
+export const videoTagTable = pgTable("vididpro_video_tag", {
+  tag_id: uuid("tag_id").notNull(),
+  video_id: uuid("video_id").notNull(),
+});
 
 export const userTableRelations = relations(userTable, ({ many }) => ({
   integrations: many(integrationTable),
@@ -93,9 +112,25 @@ export const integrationTableRelations = relations(
   }),
 );
 
-export const videoTableRelations = relations(videoTable, ({ one }) => ({
+export const videoTableRelations = relations(videoTable, ({ one, many }) => ({
   user: one(userTable, {
     fields: [videoTable.user_email],
     references: [userTable.email],
+  }),
+  tags: many(videoTagTable),
+}));
+
+export const tagTableRelations = relations(tagTable, ({ many }) => ({
+  tags: many(videoTagTable),
+}));
+
+export const videoTagTableRelations = relations(videoTagTable, ({ one }) => ({
+  video: one(videoTable, {
+    fields: [videoTagTable.video_id],
+    references: [videoTable.id],
+  }),
+  tag: one(tagTable, {
+    fields: [videoTagTable.tag_id],
+    references: [tagTable.id],
   }),
 }));

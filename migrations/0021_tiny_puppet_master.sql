@@ -1,0 +1,1 @@
+ALTER TABLE "vididpro_tag" ALTER COLUMN "description" DROP NOT NULL;

@@ -1,7 +1,5 @@
 "use client";
 
-// import "plyr-react/plyr.css";
-
 import "plyr/plyr.scss";
 
 import { useEffect, useRef } from "react";

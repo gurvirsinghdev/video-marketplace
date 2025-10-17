@@ -57,21 +57,22 @@ export const userRouter = createTRPCRouter({
         ),
       }),
     )
-    .mutation(({ input, ctx }) =>
-      pipeThroughTRPCErrorHandler(async () => {
-        await ctx.db
-          .update(userTable)
-          .set({
-            name: input.name,
-            account_type: input.account_type,
-            country: input.country,
-            registered_name: input.registered_name,
-            account_status: "fulfilled",
-            updated_at: new Date(),
-          })
-          .where(eq(userTable.email, ctx.auth.properties.email))
-          .execute();
-      }),
+    .mutation(
+      async ({ input, ctx }) =>
+        await pipeThroughTRPCErrorHandler(async () => {
+          await ctx.db
+            .update(userTable)
+            .set({
+              name: input.name,
+              account_type: input.account_type,
+              country: input.country,
+              registered_name: input.registered_name,
+              account_status: "fulfilled",
+              updated_at: new Date(),
+            })
+            .where(eq(userTable.email, ctx.auth.properties.email))
+            .execute();
+        }),
     ),
 
   updateAccountDetails: protectedDBProcedure
@@ -83,63 +84,139 @@ export const userRouter = createTRPCRouter({
         ]),
       }),
     )
-    .mutation(async ({ input, ctx }) =>
-      pipeThroughTRPCErrorHandler(async () => {
-        await ctx.db
-          .update(userTable)
-          .set({
-            name: input.name,
-            updated_at: new Date(),
-          })
-          .where(eq(userTable.email, ctx.auth.properties.email))
-          .execute();
-      }),
+    .mutation(
+      async ({ input, ctx }) =>
+        await pipeThroughTRPCErrorHandler(async () => {
+          await ctx.db
+            .update(userTable)
+            .set({
+              name: input.name,
+              updated_at: new Date(),
+            })
+            .where(eq(userTable.email, ctx.auth.properties.email))
+            .execute();
+        }),
     ),
 
-  enableStripeIntegration: protectedDBProcedure.mutation(async ({ ctx }) =>
-    pipeThroughTRPCErrorHandler(async () => {
-      const integration = await getStripeIntegrationByEmail(
-        ctx.db,
-        ctx.auth.properties.email,
-      );
-
-      let metadata: Partial<StripeIntegrationMetadata> = {};
-
-      if (!integration) {
-        const user = await getUserByEmail(ctx.db, ctx.auth.properties.email);
-
-        // Create Stripe Merchant Account
-        const { id } = await createStripeMerchantAccount(
-          extendBaseCreateCorePayload({
-            contact_email: user.email,
-            display_name: user.name!,
-            identity: {
-              business_details: {
-                registered_name: user.registered_name!,
-              },
-              country: user.country!,
-              entity_type: user.account_type!,
-            },
-          }),
+  enableStripeIntegration: protectedDBProcedure.mutation(
+    async ({ ctx }) =>
+      await pipeThroughTRPCErrorHandler(async () => {
+        const integration = await getStripeIntegrationByEmail(
+          ctx.db,
+          ctx.auth.properties.email,
         );
 
-        metadata = {
-          account_id: id,
-          configuration: undefined,
-        };
+        let metadata: Partial<StripeIntegrationMetadata> = {};
 
-        // Insert integration into DB
-        await ctx.db
-          .insert(integrationTable)
-          .values({
-            user_email: ctx.auth.properties.email,
-            active: false,
-            service: "stripe",
-            metadata,
-          })
-          .execute();
-      } else {
-        metadata = integration.metadata as Partial<StripeIntegrationMetadata>;
+        if (!integration) {
+          const user = await getUserByEmail(ctx.db, ctx.auth.properties.email);
+
+          // Create Stripe Merchant Account
+          const { id } = await createStripeMerchantAccount(
+            extendBaseCreateCorePayload({
+              contact_email: user.email,
+              display_name: user.name!,
+              identity: {
+                business_details: {
+                  registered_name: user.registered_name!,
+                },
+                country: user.country!,
+                entity_type: user.account_type!,
+              },
+            }),
+          );
+
+          metadata = {
+            account_id: id,
+            configuration: undefined,
+          };
+
+          // Insert integration into DB
+          await ctx.db
+            .insert(integrationTable)
+            .values({
+              user_email: ctx.auth.properties.email,
+              active: false,
+              service: "stripe",
+              metadata,
+            })
+            .execute();
+        } else {
+          metadata = integration.metadata as Partial<StripeIntegrationMetadata>;
+
+          if (!metadata.account_id) {
+            await ctx.db
+              .delete(integrationTable)
+              .where(eq(integrationTable.id, integration.id))
+              .execute();
+
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message:
+                "Unable to link Stripe account. Please try reconnecting from the dashboard.",
+            });
+          }
+
+          const connectedAccount = await getConnectedAccountUsingId(
+            metadata.account_id,
+          );
+
+          const stripeStatus =
+            connectedAccount.configuration.merchant.capabilities.card_payments
+              .status;
+          const stripeOnboarded = stripeStatus === "active";
+
+          // Update integration status
+          await ctx.db
+            .update(integrationTable)
+            .set({
+              active: stripeOnboarded,
+              updated_at: new Date(),
+            })
+            .where(eq(integrationTable.id, integration.id))
+            .execute();
+
+          if (stripeOnboarded) {
+            return {
+              onboarded: true,
+              public_client_secret: null,
+            };
+          }
+        }
+
+        const accountSession = await stripe.accountSessions.create({
+          account: metadata!.account_id!,
+          components: {
+            account_onboarding: {
+              enabled: true,
+            },
+          },
+        });
+
+        return {
+          onboarded: false,
+          public_client_secret: accountSession.client_secret,
+        };
+      }),
+  ),
+
+  syncStripeAccountStatus: protectedDBProcedure.mutation(
+    async ({ ctx }) =>
+      await pipeThroughTRPCErrorHandler(async () => {
+        const integration = await getStripeIntegrationByEmail(
+          ctx.db,
+          ctx.auth.properties.email,
+        );
+
+        if (!integration) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message:
+              "Please enable the Stripe integration from your dashboard.",
+          });
+        }
+
+        const metadata = integration.metadata as StripeIntegrationMetadata;
 
         if (!metadata.account_id) {
           await ctx.db
@@ -158,131 +235,61 @@ export const userRouter = createTRPCRouter({
           metadata.account_id,
         );
 
-        const stripeStatus =
+        if (
           connectedAccount.configuration.merchant.capabilities.card_payments
-            .status;
-        const stripeOnboarded = stripeStatus === "active";
+            .status === "active"
+        ) {
+          await ctx.db
+            .update(integrationTable)
+            .set({
+              active: true,
+              metadata: {
+                ...metadata,
+                configuration: connectedAccount.configuration,
+              },
+            })
+            .where(eq(integrationTable.id, integration.id))
+            .execute();
+          return true;
+        }
 
-        // Update integration status
+        return false;
+      }),
+  ),
+
+  disableStripeIntegration: protectedDBProcedure.mutation(
+    async ({ ctx }) =>
+      await pipeThroughTRPCErrorHandler(async () => {
+        const integration = await getStripeIntegrationByEmail(
+          ctx.db,
+          ctx.auth.properties.email,
+        );
+        if (!integration) return;
+
         await ctx.db
           .update(integrationTable)
           .set({
-            active: stripeOnboarded,
+            active: false,
             updated_at: new Date(),
           })
           .where(eq(integrationTable.id, integration.id))
           .execute();
-
-        if (stripeOnboarded) {
-          return {
-            onboarded: true,
-            public_client_secret: null,
-          };
-        }
-      }
-
-      const accountSession = await stripe.accountSessions.create({
-        account: metadata!.account_id!,
-        components: {
-          account_onboarding: {
-            enabled: true,
-          },
-        },
-      });
-
-      return {
-        onboarded: false,
-        public_client_secret: accountSession.client_secret,
-      };
-    }),
+      }),
   ),
 
-  syncStripeAccountStatus: protectedDBProcedure.mutation(async ({ ctx }) =>
-    pipeThroughTRPCErrorHandler(async () => {
-      const integration = await getStripeIntegrationByEmail(
-        ctx.db,
-        ctx.auth.properties.email,
-      );
-
-      if (!integration) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Please enable the Stripe integration from your dashboard.",
-        });
-      }
-
-      const metadata = integration.metadata as StripeIntegrationMetadata;
-
-      if (!metadata.account_id) {
-        await ctx.db
-          .delete(integrationTable)
-          .where(eq(integrationTable.id, integration.id))
+  getLinkedServices: protectedDBProcedure.query(
+    async ({ ctx }) =>
+      await pipeThroughTRPCErrorHandler(async () => {
+        const integrations = await ctx.db
+          .select()
+          .from(integrationTable)
+          .where(eq(integrationTable.user_email, ctx.auth.properties.email))
           .execute();
 
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message:
-            "Unable to link Stripe account. Please try reconnecting from the dashboard.",
-        });
-      }
-
-      const connectedAccount = await getConnectedAccountUsingId(
-        metadata.account_id,
-      );
-
-      if (
-        connectedAccount.configuration.merchant.capabilities.card_payments
-          .status === "active"
-      ) {
-        await ctx.db
-          .update(integrationTable)
-          .set({
-            active: true,
-            metadata: {
-              ...metadata,
-              configuration: connectedAccount.configuration,
-            },
-          })
-          .where(eq(integrationTable.id, integration.id))
-          .execute();
-        return true;
-      }
-
-      return false;
-    }),
-  ),
-
-  disableStripeIntegration: protectedDBProcedure.mutation(async ({ ctx }) =>
-    pipeThroughTRPCErrorHandler(async () => {
-      const integration = await getStripeIntegrationByEmail(
-        ctx.db,
-        ctx.auth.properties.email,
-      );
-      if (!integration) return;
-
-      await ctx.db
-        .update(integrationTable)
-        .set({
-          active: false,
-          updated_at: new Date(),
-        })
-        .where(eq(integrationTable.id, integration.id))
-        .execute();
-    }),
-  ),
-
-  getLinkedServices: protectedDBProcedure.query(async ({ ctx }) =>
-    pipeThroughTRPCErrorHandler(async () => {
-      const integrations = await ctx.db
-        .select()
-        .from(integrationTable)
-        .where(eq(integrationTable.user_email, ctx.auth.properties.email))
-        .execute();
-
-      return integrations.map((integration) => ({
-        service: integration.service,
-        active: integration.active,
-      }));
-    }),
+        return integrations.map((integration) => ({
+          service: integration.service,
+          active: integration.active,
+        }));
+      }),
   ),
 });

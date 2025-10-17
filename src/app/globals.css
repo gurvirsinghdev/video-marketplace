@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -123,6 +124,6 @@
   }
 
   .plyr {
-    @apply rounded-xl! overflow-hidden!;
+    /* @apply rounded-xl! overflow-hidden!; */
   }
 }

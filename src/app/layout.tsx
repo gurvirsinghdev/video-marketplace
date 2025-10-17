@@ -19,7 +19,7 @@ const monoFont = DM_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "VidID Pro - Stock Video Licensing Platform",
+  title: "Stock Video Licensing Platform",
   description:
     "VidID Pro, is a stock video licensing platform with thousands of stock videos avaiable in multiple categories.",
 };

@@ -13,6 +13,7 @@ import AppLogo from "./app-logo";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { MenuIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { redirectToOpenAuthServer } from "@/auth/actions";
 import { useAuthQuery } from "@/hooks/use-auth";
 import { usePathname } from "next/navigation";
@@ -22,13 +23,12 @@ export default function Header() {
   const pathname = usePathname();
   const appRoutes: Map<string, string> = new Map([
     ["home", "/"],
-    ["about", "/about"],
-    ["explore", "/explore"],
+    ["about Us", "/about-us"],
     ["contact us", "/contact-us"],
   ]);
 
   return (
-    <section className="bg-background w-full border-b">
+    <section className={cn("bg-background w-full border-b")}>
       <header className="relative mx-auto flex w-full flex-row items-center justify-between p-8 lg:p-0 lg:pl-8">
         <div suppressHydrationWarning>
           <AppLogo />

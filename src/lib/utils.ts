@@ -41,3 +41,13 @@ export const buildFileSchema = () => {
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
+
+const priceFormatter = new Intl.NumberFormat("en-US", {
+  currency: "USD",
+  style: "currency",
+  minimumIntegerDigits: 1,
+  maximumFractionDigits: 2,
+});
+export const formatPrice = (number: string) => {
+  return priceFormatter.format(parseFloat(number));
+};

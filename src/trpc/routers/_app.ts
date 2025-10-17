@@ -1,16 +1,19 @@
 import { TRPCError } from "@trpc/server";
 import { authRouter } from "./auth.router";
 import { createTRPCRouter } from "../init";
+import { tagsRouter } from "./tags.router";
 import { userRouter } from "./user.router";
 import { videoRouter } from "./video.router";
 
-export function pipeThroughTRPCErrorHandler<T extends () => ReturnType<T>>(
-  callbackFn: T,
-): ReturnType<T> {
+export async function pipeThroughTRPCErrorHandler<
+  // eslint-disable-next-line
+  T extends () => any,
+  R = ReturnType<T>,
+>(callbackFn: T): Promise<R> {
   try {
-    return callbackFn();
+    return await callbackFn();
   } catch (error) {
-    console.log((error as Error).message);
+    console.log(error as Error);
     if (error instanceof TRPCError) {
       throw error;
     }
@@ -25,6 +28,7 @@ export const appRouter = createTRPCRouter({
   auth: authRouter,
   user: userRouter,
   video: videoRouter,
+  tags: tagsRouter,
 });
 
 export type AppRouter = typeof appRouter;

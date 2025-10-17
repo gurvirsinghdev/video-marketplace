@@ -3,6 +3,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
 import React, { useEffect, useState } from "react";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { AppRouter } from "@/trpc/routers/_app";
@@ -13,7 +14,6 @@ import PaginatedList from "../tables/paginated-list";
 import VideoItem from "./video-item";
 import importDynamic from "next/dynamic";
 import { inferProcedureOutput } from "@trpc/server";
-import { useSuspenseQuery } from "@tanstack/react-query";
 import { useTRPC } from "@/trpc/client";
 
 const VideoPlayer = importDynamic(
@@ -135,7 +135,7 @@ export default function VideosPageListing() {
               </p>
               {selectedVideo.tags && (
                 <div className="mt-2 flex flex-wrap gap-1">
-                  {selectedVideo.tags.split(",").map((tag, idx) => (
+                  {selectedVideo.tags.map((tag, idx) => (
                     <Badge variant={"secondary"} key={idx}>
                       {tag}
                     </Badge>

@@ -22,6 +22,7 @@ interface Props<
   TName = FieldPath<InferInput<TSchema>>,
 > {
   name: TName;
+  hideLabel?: boolean;
   render: (
     field: Omit<
       ControllerRenderProps<InferInput<TSchema>, Path<InferInput<TSchema>>>,
@@ -46,9 +47,11 @@ export default function FormField<TSchema extends BaseSchema<any, any, any>>(
       name={props.name}
       render={({ field: { value, ...field } }) => (
         <FormItem>
-          <FormLabel className="text-foreground capitalize">
-            {props.name.replace(/_+/gm, " ")}
-          </FormLabel>
+          {!props.hideLabel && (
+            <FormLabel className="text-foreground capitalize">
+              {props.name.replace(/_+/gm, " ")}
+            </FormLabel>
+          )}
           {props.render(field, value)}
           <FormMessage />
         </FormItem>

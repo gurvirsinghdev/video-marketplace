@@ -134,6 +134,27 @@
       "when": 1760378100710,
       "tag": "0018_spooky_betty_brant",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1760623052900,
+      "tag": "0019_tough_mordo",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1760625014106,
+      "tag": "0020_slim_venus",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1760625057448,
+      "tag": "0021_tiny_puppet_master",
+      "breakpoints": true
     }
   ]
 }

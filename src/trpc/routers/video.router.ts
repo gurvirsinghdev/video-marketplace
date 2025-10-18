@@ -3,6 +3,7 @@ import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
 import { array, enum_, number, object, string } from "valibot";
 import { buildPriceSchema, buildStringSchema } from "@/lib/utils";
 import {
+  baseProcedureWithDB,
   createTRPCRouter,
   protectedDBProcedure,
   protectedProcedure,
@@ -117,8 +118,6 @@ export const videoRouter = createTRPCRouter({
             .groupBy(videoTable.id)
             .execute();
 
-          console.log(records);
-
           return {
             pageSize,
             pages: Math.ceil(count / pageSize),
@@ -136,7 +135,7 @@ export const videoRouter = createTRPCRouter({
           };
         }),
     ),
-  listTopVideos: protectedDBProcedure.query(async ({ ctx }) =>
+  listTopVideos: baseProcedureWithDB.query(async ({ ctx }) =>
     pipeThroughTRPCErrorHandler(async () => {
       const records = await ctx.db
         .select()

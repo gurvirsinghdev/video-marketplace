@@ -30,8 +30,6 @@ export default function FilePickerField({
       ? (formState.errors[errorKey] as { message: string } | undefined)
       : undefined;
 
-  console.log(fieldError);
-
   const fileInputRef = useRef<HTMLInputElement>(null);
   const handleFileInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -15,14 +15,22 @@ export default function DashboardBreadcrumbs() {
   const pathname = usePathname();
   const items = pathname.split("/").filter((path) => !!path);
 
+  const buildPaths = (items: string[]) => {
+    let base = "";
+    return items.map(item => {
+      base += `/${item}`;
+      return base; 
+    });
+  }
+
   return (
     <Breadcrumb>
       <BreadcrumbList>
-        {items.map((path, idx) => (
+        {buildPaths(items).map((path, idx) => (
           <React.Fragment key={idx}>
             <BreadcrumbItem>
               <BreadcrumbLink href={path} className="capitalize">
-                {path.replace(/-+/gm, " ")}
+                {path.replace(/.*\/(\w+)/gm, "$1")}
               </BreadcrumbLink>
             </BreadcrumbItem>
             {idx !== items.length - 1 && <BreadcrumbSeparator />}

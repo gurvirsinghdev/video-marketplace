@@ -1,11 +1,11 @@
 "use client";
 
-import "plyr/plyr.scss";
+import "video.js/dist/video-js.css";
+import "videojs-plyr/css/videojs-plyr.css"
 
 import { useEffect, useRef } from "react";
 
-import Hls from "hls.js";
-import Plyr from "plyr";
+import videojs from "video.js";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -16,36 +16,50 @@ interface Props {
 
 export default function VideoPlayer(props: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const playerRef = useRef<ReturnType<typeof videojs> | null>(null);
+
 
   useEffect(
     function () {
       if (!videoRef.current) return;
-      new Plyr(videoRef.current!, {
-        controls: ["play", "progress", "current-time"],
+
+      if (playerRef.current) {
+        // playerRef.current.dispose();
+        playerRef.current = null;
+      }
+
+      const player = videojs(videoRef.current, {
+        controls: true,
+        preload: "auto",
+        responsive: true,
+        fluid: true,
+        poster: props.thumbnailUrl,
+        sources: [
+          {
+            src: props.playlistUrl,
+            type: "application/x-mpegURL",
+          },
+        ],
       });
 
-      if (Hls.isSupported()) {
-        const hls = new Hls();
-        console.log(props.playlistUrl);
-        hls.loadSource(props.playlistUrl);
-        hls.attachMedia(videoRef.current);
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          videoRef.current!.poster = props.thumbnailUrl;
-          console.log(videoRef.current);
-        });
+      playerRef.current = player;
+      console.log(playerRef.current);
 
-        return () => hls.destroy();
-      }
+      return () => {
+        // playerRef.current?.dispose();
+        playerRef.current = null;
+      };
     },
     // eslint-disable-next-line
     [props.playlistUrl],
   );
 
   return (
-    <video
-      ref={videoRef}
-      controls
-      className={cn("aspect-video", props.className)}
-    ></video>
+    <div className={cn("w-full", props.className, "aspect-video")}> 
+      <video
+        ref={videoRef}
+        className={cn("video-js vjs-theme-plyr")}
+      ></video>
+    </div>
   );
 }

@@ -13,7 +13,7 @@ export async function pipeThroughTRPCErrorHandler<
   try {
     return await callbackFn();
   } catch (error) {
-    console.log(error as Error);
+    console.error(error as Error);
     if (error instanceof TRPCError) {
       throw error;
     }

@@ -100,7 +100,19 @@ export const videoTagTable = pgTable("vididpro_video_tag", {
 export const userTableRelations = relations(userTable, ({ many }) => ({
   integrations: many(integrationTable),
   videos: many(videoTable),
+  licenses: many(licenseTable),
 }));
+
+export const licenseTypeEnum = pgEnum("vididpro_license_type", ["instant", "custom"]);
+export const licenseTable = pgTable("vididpro_license", {
+  id: uuid("id").notNull().defaultRandom(),
+  user_email: varchar("user_email").notNull(),
+  video_id: uuid('video_id').notNull(),
+  license_key: varchar("license_key").notNull().unique(),
+  license_type: licenseTypeEnum().notNull(),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+  updated_at: timestamp("updated_at"),
+});
 
 export const integrationTableRelations = relations(
   integrationTable,
@@ -118,6 +130,7 @@ export const videoTableRelations = relations(videoTable, ({ one, many }) => ({
     references: [userTable.email],
   }),
   tags: many(videoTagTable),
+  license: many(licenseTable),
 }));
 
 export const tagTableRelations = relations(tagTable, ({ many }) => ({
@@ -134,3 +147,14 @@ export const videoTagTableRelations = relations(videoTagTable, ({ one }) => ({
     references: [tagTable.id],
   }),
 }));
+
+export const licenseTableRelations = relations(licenseTable, ({ one, many }) => ({
+  user: one(userTable, {
+    fields: [licenseTable.user_email],
+    references: [userTable.email],
+  }),
+  video: one(videoTable, { 
+    fields: [licenseTable.video_id],
+    references: [videoTable.id],
+  })
+}))

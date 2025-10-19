@@ -155,6 +155,13 @@
       "when": 1760625057448,
       "tag": "0021_tiny_puppet_master",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1760807711549,
+      "tag": "0022_curious_the_enforcers",
+      "breakpoints": true
     }
   ]
 }

@@ -4,7 +4,7 @@ import { pipeThroughTRPCErrorHandler } from "./_app";
 import { licenseTable, videoTable } from "@/db/schemas/app.schema";
 import { buildStringSchema } from "@/lib/utils";
 import { desc, eq, sql } from "drizzle-orm";
-import { getCloudfrontUrl } from "@/lib/cloudfront";
+import { getCloudfrontUrl, getOriginalUrl } from "@/lib/cloudfront";
 import { TRPCError } from "@trpc/server";
 import Stripe from "stripe";
 import { headers } from "next/headers";
@@ -72,7 +72,44 @@ export const licenseRouter = createTRPCRouter({
               thumbnail_key: getCloudfrontUrl(
                 license.vididpro_video?.thumbnail_key,
               ),
+              m3u8_key: getCloudfrontUrl(license.vididpro_video?.m3u8_key),
+            },
+          })),
+        };
+      }),
+    ),
 
+  listUserRequestedLicensesPaginated: protectedDBProcedure
+    .input(object({ page: number() }))
+    .query(async ({ input, ctx }) =>
+      pipeThroughTRPCErrorHandler(async () => {
+        const [{ count }] = await ctx.db
+          .select({ count: sql<number>`count(*)` })
+          .from(licenseTable)
+          .where(eq(licenseTable.user_email, ctx.auth.properties.email))
+          .execute();
+
+        const offset = (input.page - 1) * pageSize;
+        const licenses = await ctx.db
+          .select()
+          .from(licenseTable)
+          .leftJoin(videoTable, eq(videoTable.id, licenseTable.video_id))
+          .where(eq(licenseTable.user_email, ctx.auth.properties.email))
+          .orderBy(desc(licenseTable.created_at))
+          .offset(offset)
+          .limit(pageSize)
+          .execute();
+
+        return {
+          pageSize,
+          pages: Math.ceil(count / pageSize),
+          requests: licenses.map((license) => ({
+            ...license,
+            vididpro_video: {
+              ...license.vididpro_video,
+              thumbnail_key: getCloudfrontUrl(
+                license.vididpro_video?.thumbnail_key,
+              ),
               m3u8_key: getCloudfrontUrl(license.vididpro_video?.m3u8_key),
             },
           })),
@@ -318,5 +355,55 @@ export const licenseRouter = createTRPCRouter({
             currency: checkoutSessionDetails.currency,
           };
         }),
+    ),
+
+  getDownloadUrlForLicense: protectedDBProcedure
+    .input(object({ licenseId: buildStringSchema("License Id") }))
+    .mutation(async ({ ctx, input }) =>
+      pipeThroughTRPCErrorHandler(async () => {
+        const [licenseJoin] = await ctx.db
+          .select()
+          .from(licenseTable)
+          .leftJoin(videoTable, eq(videoTable.id, licenseTable.video_id))
+          .where(eq(licenseTable.id, input.licenseId))
+          .limit(1)
+          .execute();
+
+        const license = licenseJoin?.vididpro_license;
+        const video = licenseJoin?.vididpro_video;
+
+        if (!license || !video) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "License not found",
+          });
+        }
+
+        if (license.user_email !== ctx.auth.properties.email) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Not your license",
+          });
+        }
+
+        if (license.payment_status !== "paid") {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "License is not paid",
+          });
+        }
+
+        // Prefer original file for download; fallback to m3u8 if original is missing
+        const fileKey = video.original_key || video.m3u8_key;
+        if (!fileKey) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "No downloadable file found",
+          });
+        }
+
+        const directUrl = await getOriginalUrl(fileKey);
+        return { url: directUrl };
+      }),
     ),
 });

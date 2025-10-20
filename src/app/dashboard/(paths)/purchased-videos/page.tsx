@@ -1,13 +1,21 @@
-import DashboardPageContents from "@/modules/dashboard/dashboard-page-contents";
-import DashboardPageHeader from "@/modules/dashboard/page-header";
+import { getQueryClient, trpc } from "@/trpc/server";
+import DashboardPurchasedLicensesView from "@/views/dashboard/purchased-licenses.page";
+import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 
-export default function DashboardPurchasedPage() {
+interface Props {
+  searchParams: Promise<Partial<{ page: string }>>;
+}
+
+export default async function DashboardPurchasedPage({ searchParams }: Props) {
+  const queryClient = getQueryClient();
+  const page = Number((await searchParams).page) || 1;
+  void queryClient.prefetchQuery(
+    trpc.license.listUserRequestedLicensesPaginated.queryOptions({ page }),
+  );
+
   return (
-    <DashboardPageContents>
-      <DashboardPageHeader
-        title="Approved Video Licenses"
-        brief="Videos you have requested and been granted a license to access."
-      />
-    </DashboardPageContents>
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <DashboardPurchasedLicensesView />
+    </HydrationBoundary>
   );
 }

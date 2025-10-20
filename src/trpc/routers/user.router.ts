@@ -1,7 +1,4 @@
-import {
-  Configuration,
-  getConnectedAccountUsingId,
-} from "@/sdk/stripe/get-connected-account-using-id";
+import { getConnectedAccountUsingId } from "@/sdk/stripe/get-connected-account-using-id";
 import {
   createStripeMerchantAccount,
   extendBaseCreateCorePayload,
@@ -23,7 +20,7 @@ import { pipeThroughTRPCErrorHandler } from "./_app";
 
 interface StripeIntegrationMetadata {
   account_id: string;
-  configuration: Configuration | undefined;
+  updated_at?: Date;
 }
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -128,7 +125,6 @@ export const userRouter = createTRPCRouter({
 
           metadata = {
             account_id: id,
-            configuration: undefined,
           };
 
           // Insert integration into DB
@@ -161,9 +157,7 @@ export const userRouter = createTRPCRouter({
             metadata.account_id,
           );
 
-          const stripeStatus =
-            connectedAccount.configuration.merchant.capabilities.card_payments
-              .status;
+          const stripeStatus = connectedAccount.capabilities?.card_payments;
           const stripeOnboarded = stripeStatus === "active";
 
           // Update integration status
@@ -235,17 +229,14 @@ export const userRouter = createTRPCRouter({
           metadata.account_id,
         );
 
-        if (
-          connectedAccount.configuration.merchant.capabilities.card_payments
-            .status === "active"
-        ) {
+        if (connectedAccount.payouts_enabled) {
           await ctx.db
             .update(integrationTable)
             .set({
               active: true,
               metadata: {
                 ...metadata,
-                configuration: connectedAccount.configuration,
+                updated_at: new Date(),
               },
             })
             .where(eq(integrationTable.id, integration.id))

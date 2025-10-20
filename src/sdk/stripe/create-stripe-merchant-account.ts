@@ -1,6 +1,4 @@
-import axios, { AxiosError } from "axios";
-
-import { headers } from ".";
+import Stripe from "stripe";
 
 interface ICreateCoreAccountPayload {
   contact_email: string;
@@ -80,7 +78,7 @@ export const extendBaseCreateCorePayload = <
         capabilities: {
           stripe_balance: {
             stripe_transfers: {
-              requested: true,
+              requested: true, // Ensure recipient capabilities are requested
             },
           },
         },
@@ -98,14 +96,34 @@ export const extendBaseCreateCorePayload = <
 export const createStripeMerchantAccount = async (
   payload: ICreateCoreAccountPayload,
 ): Promise<{ id: string }> => {
-  try {
-    return (
-      await axios.post("https://api.stripe.com/v2/core/accounts", payload, {
-        headers: headers,
-      })
-    ).data;
-  } catch (err) {
-    console.error((err as AxiosError).response);
-    throw err;
-  }
+  // Use Stripe SDK v1 to create an Express connected account
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+
+  const businessType = payload.identity.entity_type as
+    | Stripe.AccountCreateParams.BusinessType
+    | undefined;
+
+  const account = await stripe.accounts.create({
+    type: "express",
+    country: payload.identity.country,
+    business_type: businessType,
+    business_profile: {
+      name: payload.display_name,
+      support_email: payload.contact_email,
+    },
+    tos_acceptance: {
+      service_agreement: "recipient",
+    },
+    company:
+      businessType === "company"
+        ? {
+            name: payload.identity.business_details.registered_name,
+          }
+        : undefined,
+    capabilities: {
+      transfers: { requested: true },
+    },
+  });
+
+  return { id: account.id };
 };

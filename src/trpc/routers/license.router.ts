@@ -8,6 +8,7 @@ import { TRPCError } from "@trpc/server";
 import Stripe from "stripe";
 import { Resource } from "sst";
 import { headers } from "next/headers";
+import { getStripeIntegrationByEmail } from "@/lib/server.utils";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-09-30.clover",
@@ -59,8 +60,39 @@ export const licenseRouter = createTRPCRouter({
         if (input.licenseType === "instant") {
           const headerMap = await headers();
           const host = headerMap.get("host");
+
+          console.log(videoData.user_email);
+          const integration = await getStripeIntegrationByEmail(
+            ctx.db,
+            videoData.user_email,
+          );
+          if (!integration.active) {
+            throw new TRPCError({
+              code: "FORBIDDEN",
+              message:
+                "The uploader of this video has temporarily disabled payments.",
+            });
+          }
+          const destinationAccountId = (
+            integration.metadata as { account_id?: string } | undefined
+          )?.account_id;
+
+          if (!destinationAccountId) {
+            throw new TRPCError({
+              code: "FORBIDDEN",
+              message:
+                "The uploader of this video has temporarily disabled payments.",
+            });
+          }
+
           // Create Stripe session and an instant license row
           const checkoutSession = await stripe.checkout.sessions.create({
+            payment_intent_data: {
+              application_fee_amount: Math.round(+videoData.price * 100 * 0.5),
+              transfer_data: {
+                destination: destinationAccountId,
+              },
+            },
             metadata: { video_id: videoData.id, purpose: input.purpose || "" },
             line_items: [
               {
@@ -74,7 +106,8 @@ export const licenseRouter = createTRPCRouter({
             ],
             mode: "payment",
             ui_mode: "embedded",
-            return_url: `https://${host}/payments?session_id={CHECKOUT_SESSION_ID}`,
+
+            return_url: `https://${host}/payment-status?session_id={CHECKOUT_SESSION_ID}`,
           });
 
           await ctx.db.insert(licenseTable).values({
@@ -139,7 +172,8 @@ export const licenseRouter = createTRPCRouter({
           const paymentTime = new Date(
             checkoutSessionDetails.created * 1000,
           ).toISOString();
-          const amountPaid = +checkoutSessionDetails.amount_total! / 100;
+          const amountTotalCents = checkoutSessionDetails.amount_total!; // integer cents
+          const amountPaid = amountTotalCents / 100; // for response only
 
           await ctx.db
             .update(licenseTable)

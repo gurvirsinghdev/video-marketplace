@@ -308,6 +308,111 @@ export const licenseRouter = createTRPCRouter({
       }),
     ),
 
+  createSettlePriceCheckoutSession: protectedDBProcedure
+    .input(object({ licenseId: buildStringSchema("License Id") }))
+    .mutation(async ({ ctx, input }) =>
+      pipeThroughTRPCErrorHandler(async () => {
+        const [licenseJoin] = await ctx.db
+          .select()
+          .from(licenseTable)
+          .leftJoin(videoTable, eq(videoTable.id, licenseTable.video_id))
+          .where(eq(licenseTable.id, input.licenseId))
+          .limit(1)
+          .execute();
+
+        const license = licenseJoin?.vididpro_license;
+        const video = licenseJoin?.vididpro_video;
+        if (!license || !video) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "License not found",
+          });
+        }
+        if (license.user_email !== ctx.auth.properties.email) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Not your license",
+          });
+        }
+        if (license.license_type !== "custom") {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Only custom licenses support settled checkout",
+          });
+        }
+        if (!license.settle_price) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "No settled price set for this license",
+          });
+        }
+        if (license.payment_status === "paid") {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "This license is already paid",
+          });
+        }
+
+        const headerMap = await headers();
+        const host = headerMap.get("host");
+
+        const integration = await getStripeIntegrationByEmail(
+          ctx.db,
+          video.user_email,
+        );
+        if (!integration.active) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "The uploader has disabled payments.",
+          });
+        }
+        const destinationAccountId = (
+          integration.metadata as { account_id?: string } | undefined
+        )?.account_id;
+        if (!destinationAccountId) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "The uploader has disabled payments.",
+          });
+        }
+
+        const unitAmount = Math.round(+license.settle_price * 100);
+        const applicationFee = Math.round(+license.settle_price * 100 * 0.5);
+
+        const checkoutSession = await stripe.checkout.sessions.create({
+          payment_intent_data: {
+            application_fee_amount: applicationFee,
+            transfer_data: { destination: destinationAccountId },
+          },
+          metadata: { license_id: license.id, video_id: video.id },
+          line_items: [
+            {
+              price_data: {
+                currency: "usd",
+                product_data: { name: `${video.title} — Custom License` },
+                unit_amount: unitAmount,
+              },
+              quantity: 1,
+            },
+          ],
+          mode: "payment",
+          ui_mode: "embedded",
+          return_url: `https://${host}/payment-status?session_id={CHECKOUT_SESSION_ID}`,
+        });
+
+        await ctx.db
+          .update(licenseTable)
+          .set({ stripe_session_checkout_id: checkoutSession.id })
+          .where(eq(licenseTable.id, license.id))
+          .execute();
+
+        return {
+          client_secret: checkoutSession.client_secret,
+          session_id: checkoutSession.id,
+        };
+      }),
+    ),
+
   getStripeCheckoutSession: protectedDBProcedure
     .input(object({ session_id: buildStringSchema("Session ID") }))
     .mutation(

@@ -25,7 +25,6 @@ export default function Header() {
     ["home", "/"],
     ["about Us", "/about-us"],
     ["explore", "/explore"],
-    ["contact us", "/contact-us"],
   ]);
 
   return (

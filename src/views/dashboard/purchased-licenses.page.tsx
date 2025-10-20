@@ -27,6 +27,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { loadStripe } from "@stripe/stripe-js";
+import { EmbeddedCheckout, EmbeddedCheckoutProvider } from "@stripe/react-stripe-js";
 
 export default function DashboardPurchasedLicensesView() {
   const trpc = useTRPC();
@@ -41,6 +43,9 @@ export default function DashboardPurchasedLicensesView() {
   const [selected, setSelected] = useState<
     (typeof listUserRequestedLicensesPaginated.data)["requests"][number] | null
   >(null);
+  const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+  const [checkoutSecret, setCheckoutSecret] = useState<string | null>(null);
+  const [openCheckout, setOpenCheckout] = useState(false);
 
   const downloadMutation = useMutation(
     trpc.license.getDownloadUrlForLicense.mutationOptions({
@@ -52,6 +57,25 @@ export default function DashboardPurchasedLicensesView() {
       },
       onSuccess() {
         toast.dismiss("download");
+      },
+    }),
+  );
+
+  const createSettleCheckoutMutation = useMutation(
+    trpc.license.createSettlePriceCheckoutSession.mutationOptions({
+      onMutate() {
+        toast.loading("Creating checkout...", { id: "settle-checkout" });
+      },
+      onError(error) {
+        toast.error(
+          error instanceof Error ? error.message : "Failed to create checkout.",
+          { id: "settle-checkout" },
+        );
+      },
+      onSuccess(data) {
+        toast.dismiss("settle-checkout");
+        setCheckoutSecret((data as any).client_secret as string);
+        setOpenCheckout(true);
       },
     }),
   );
@@ -307,6 +331,21 @@ export default function DashboardPurchasedLicensesView() {
               >
                 Close
               </Button>
+              {selected?.vididpro_license?.license_type === "custom" &&
+              !!selected?.vididpro_license?.settle_price &&
+              selected?.vididpro_license?.payment_status !== "paid" ? (
+                <Button
+                  variant="default"
+                  onClick={async () => {
+                    if (!selected?.vididpro_license?.id) return;
+                    await createSettleCheckoutMutation.mutateAsync({
+                      licenseId: selected.vididpro_license.id,
+                    });
+                  }}
+                >
+                  Pay Now
+                </Button>
+              ) : null}
               {selected?.vididpro_license?.payment_status === "paid" ? (
                 <Button
                   onClick={async () => {
@@ -331,6 +370,19 @@ export default function DashboardPurchasedLicensesView() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        {checkoutSecret && (
+          <Dialog open={openCheckout} onOpenChange={setOpenCheckout}>
+            <DialogContent className="max-h-[80vh] w-full max-w-3xl overflow-auto">
+              <DialogHeader></DialogHeader>
+              <EmbeddedCheckoutProvider
+                options={{ clientSecret: checkoutSecret }}
+                stripe={stripePromise}
+              >
+                <EmbeddedCheckout />
+              </EmbeddedCheckoutProvider>
+            </DialogContent>
+          </Dialog>
+        )}
       </Suspense>
     </DashboardPageContents>
   );

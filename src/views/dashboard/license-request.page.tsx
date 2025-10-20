@@ -22,10 +22,14 @@ import DashboardPageHeader from "@/modules/dashboard/page-header";
 import PaginatedList from "@/modules/tables/paginated-list";
 import { VideoThumbnail } from "@/modules/videos/video-thumbnail";
 import { useTRPC } from "@/trpc/client";
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import moment from "moment";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 
 export default function DashboardLicenseRequestsView() {
   const trpc = useTRPC();
@@ -42,6 +46,59 @@ export default function DashboardLicenseRequestsView() {
   const [selected, setSelected] = useState<
     (typeof listMyLicensesRequestPagniated.data)["requests"][number] | null
   >(null);
+
+  // Local inputs for settle price and creator notes
+  const [settlePriceInput, setSettlePriceInput] = useState<string>("");
+  const [creatorNotesInput, setCreatorNotesInput] = useState<string>("");
+
+  useEffect(() => {
+    if (selected?.vididpro_license) {
+      setSettlePriceInput(selected.vididpro_license.settle_price || "");
+      setCreatorNotesInput(selected.vididpro_license.creator_notes || "");
+    } else {
+      setSettlePriceInput("");
+      setCreatorNotesInput("");
+    }
+  }, [selected, open]);
+
+  const setSettlePriceMutation = useMutation(
+    trpc.license.setLicenseSettlePrice.mutationOptions({
+      onMutate() {
+        toast.loading("Setting settle price...", {
+          id: "settle-price",
+        });
+      },
+      onError() {
+        toast.error("Failed to set settle price.", {
+          id: "settle-price",
+        });
+      },
+      onSuccess() {
+        toast.success("Settle price set successfully.", {
+          id: "settle-price",
+        });
+      },
+    }),
+  );
+  const setCreatorNotesMutation = useMutation(
+    trpc.license.setLicenseCreatorNotes.mutationOptions({
+      onMutate() {
+        toast.loading("Setting creator notes...", {
+          id: "creator-notes",
+        });
+      },
+      onError() {
+        toast.error("Failed to set creator notes.", {
+          id: "creator-notes",
+        });
+      },
+      onSuccess() {
+        toast.success("Creator notes set successfully.", {
+          id: "creator-notes",
+        });
+      },
+    }),
+  );
 
   if (listMyLicensesRequestPagniated.isLoading) {
     return <BaseLoader />;
@@ -104,19 +161,19 @@ export default function DashboardLicenseRequestsView() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          {/* TODO: Add payment */}
-                          {/* <Badge
+                          <Badge
                             className="capitalize"
                             variant={
                               item.vididpro_license.payment_status === "paid"
                                 ? "default"
-                                : item.vididpro_license.payment_status === "failed"
+                                : item.vididpro_license.payment_status ===
+                                    "failed"
                                   ? "destructive"
                                   : "secondary"
                             }
                           >
-                            {item.vididpro_license.payment_status ?? "In Discussion"}
-                          </Badge> */}
+                            {item.vididpro_license.payment_status}
+                          </Badge>
                         </div>
                       </div>
                     </button>
@@ -165,42 +222,46 @@ export default function DashboardLicenseRequestsView() {
                     </div>
                   </div>
                   <div>
-                    <div className="text-muted-foreground text-xs">Payment</div>
+                    <div className="text-muted-foreground text-xs">
+                      Payment Status
+                    </div>
                     <div>
-                      {/* <Badge
+                      <Badge
                         className="capitalize"
                         variant={
-                          selectedLicense.payment_status === "paid"
+                          selected?.vididpro_license.payment_status === "paid"
                             ? "default"
-                            : selectedLicense.payment_status === "failed"
+                            : selected?.vididpro_license.payment_status ===
+                                "failed"
                               ? "destructive"
                               : "secondary"
                         }
                       >
-                        {selectedLicense.payment_status ?? "In Discussion"}
-                      </Badge> */}
+                        {selected?.vididpro_license.payment_status}
+                      </Badge>
                     </div>
                   </div>
-                  {/* {selected.vididpro_license.price ? (
+                  {selected.vididpro_license.license_type === "custom" &&
+                  selected.vididpro_license?.quote_price ? (
                     <div>
                       <div className="text-muted-foreground text-xs">
                         Quoted Price
                       </div>
                       <div className="text-sm">
-                        {formatPrice(selected.vididpro_license.price)}
+                        {formatPrice(selected.vididpro_license?.quote_price)}
                       </div>
                     </div>
-                  ) : null} */}
+                  ) : null}
                 </div>
 
-                {/* {selected.vididpro_license.purpose ? (
+                {selected.vididpro_license.purpose ? (
                   <div>
                     <div className="text-muted-foreground text-xs">Purpose</div>
                     <div className="text-sm whitespace-pre-wrap">
                       {selected.vididpro_license.purpose}
                     </div>
                   </div>
-                ) : null} */}
+                ) : null}
 
                 {selected.vididpro_license.license_type === "custom" ? (
                   <div className="grid grid-cols-2 gap-3">
@@ -258,6 +319,16 @@ export default function DashboardLicenseRequestsView() {
                 ) : null}
 
                 <div className="grid grid-cols-2 gap-3">
+                  {selected.vididpro_license.requester_name ? (
+                    <div>
+                      <div className="text-muted-foreground text-xs">
+                        Requester
+                      </div>
+                      <div className="text-sm">
+                        {selected.vididpro_license.requester_name}
+                      </div>
+                    </div>
+                  ) : null}
                   {selected.vididpro_license.user_email ? (
                     <div>
                       <div className="text-muted-foreground text-xs">
@@ -268,16 +339,16 @@ export default function DashboardLicenseRequestsView() {
                       </div>
                     </div>
                   ) : null}
-                  {/* {selected.vididpro_license.user_email ? (
+                  {selected.vididpro_license.creator_notes ? (
                     <div className="sm:col-span-2">
                       <div className="text-muted-foreground text-xs">
                         Creator Notes
                       </div>
                       <div className="text-sm whitespace-pre-wrap">
-                        {selected.vididpro_license.user_email}
+                        {selected.vididpro_license.creator_notes}
                       </div>
                     </div>
-                  ) : null} */}
+                  ) : null}
                 </div>
 
                 {selected.vididpro_video ? (
@@ -305,7 +376,7 @@ export default function DashboardLicenseRequestsView() {
               </div>
             ) : null}
 
-            <DialogFooter>
+            <DialogFooter className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <Button
                 className="cursor-pointer"
                 variant="secondary"
@@ -313,41 +384,54 @@ export default function DashboardLicenseRequestsView() {
               >
                 Close
               </Button>
-              {/* {selected.vididpro_video ? (
-                selected.vididpro_license?.license_type === "custom" &&
-                !selected.vididpro_license.payment_status ? (
-                  <>
+              {selected?.vididpro_license ? (
+                <div className="grid w-full grid-cols-1 gap-3 sm:w-auto sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium">Settle Price</div>
+                    <Input
+                      value={settlePriceInput}
+                      onChange={(e) => setSettlePriceInput(e.target.value)}
+                      placeholder="Enter final settle price"
+                    />
                     <Button
-                      onClick={() => {
-                        form.reset({
-                          price: selectedLicense?.price
-                            ? selectedLicense?.price
-                            : selectedVideo?.price
-                              ? selectedVideo.price
-                              : "0",
+                      className="w-full"
+                      onClick={async () => {
+                        if (!selected?.vididpro_license?.id) return;
+                        await setSettlePriceMutation.mutateAsync({
+                          licenseId: selected.vididpro_license.id,
+                          settlePrice: settlePriceInput,
                         });
-                        setOpenPriceDialog(true);
+                        // refresh data
+                        listMyLicensesRequestPagniated.refetch();
                       }}
                     >
-                      Set License Price
+                      Save
                     </Button>
-                  </>
-                ) : (
-                  <>
-                    <Link
-                      href={`/dashboard/videos/${selectedVideo.id}`}
-                      className="inline-flex w-full sm:w-auto"
+                  </div>
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium">Creator Notes</div>
+                    <Textarea
+                      value={creatorNotesInput}
+                      onChange={(e) => setCreatorNotesInput(e.target.value)}
+                      placeholder="Add private notes for this license"
+                      rows={3}
+                    />
+                    <Button
+                      className="w-full"
+                      onClick={async () => {
+                        if (!selected?.vididpro_license?.id) return;
+                        await setCreatorNotesMutation.mutateAsync({
+                          licenseId: selected.vididpro_license.id,
+                          creatorNotes: creatorNotesInput,
+                        });
+                        listMyLicensesRequestPagniated.refetch();
+                      }}
                     >
-                      <Button
-                        variant="default"
-                        className="w-full cursor-pointer"
-                      >
-                        Open Video
-                      </Button>
-                    </Link>
-                  </>
-                )
-              ) : null} */}
+                      Save
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
             </DialogFooter>
           </DialogContent>
         </Dialog>

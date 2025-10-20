@@ -3,7 +3,7 @@ import { createTRPCRouter, protectedDBProcedure } from "../init";
 import { pipeThroughTRPCErrorHandler } from "./_app";
 import { licenseTable, videoTable } from "@/db/schemas/app.schema";
 import { buildStringSchema } from "@/lib/utils";
-import { eq, sql } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { getCloudfrontUrl } from "@/lib/cloudfront";
 import { TRPCError } from "@trpc/server";
 import Stripe from "stripe";
@@ -31,6 +31,7 @@ const createLicenseRequestSchema = object({
   purpose: optional(
     buildStringSchema(["Purpose", "Please provide a detailed purpose."]),
   ),
+  quotePrice: optional(string()),
 });
 export const licenseRouter = createTRPCRouter({
   listMyLicensesRequestPagniated: protectedDBProcedure
@@ -56,6 +57,7 @@ export const licenseRouter = createTRPCRouter({
             eq(videoTable.user_email, ctx.auth.properties.email),
           )
           .where(eq(licenseTable.video_id, videoTable.id))
+          .orderBy(desc(licenseTable.created_at))
           .offset(offset)
           .limit(pageSize)
           .execute();
@@ -70,10 +72,85 @@ export const licenseRouter = createTRPCRouter({
               thumbnail_key: getCloudfrontUrl(
                 license.vididpro_video?.thumbnail_key,
               ),
+
               m3u8_key: getCloudfrontUrl(license.vididpro_video?.m3u8_key),
             },
           })),
         };
+      }),
+    ),
+
+  setLicenseSettlePrice: protectedDBProcedure
+    .input(
+      object({
+        licenseId: buildStringSchema("License Id"),
+        settlePrice: buildStringSchema("Settle Price"),
+      }),
+    )
+    .mutation(async ({ ctx, input }) =>
+      pipeThroughTRPCErrorHandler(async () => {
+        // Ensure the current user owns the video for this license
+        const [licenseJoin] = await ctx.db
+          .select()
+          .from(licenseTable)
+          .leftJoin(videoTable, eq(videoTable.id, licenseTable.video_id))
+          .where(eq(licenseTable.id, input.licenseId))
+          .limit(1)
+          .execute();
+
+        if (
+          !licenseJoin ||
+          licenseJoin.vididpro_video?.user_email !== ctx.auth.properties.email
+        ) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "You do not own this video.",
+          });
+        }
+
+        await ctx.db
+          .update(licenseTable)
+          .set({ settle_price: input.settlePrice })
+          .where(eq(licenseTable.id, input.licenseId))
+          .execute();
+
+        return true;
+      }),
+    ),
+  setLicenseCreatorNotes: protectedDBProcedure
+    .input(
+      object({
+        licenseId: buildStringSchema("License Id"),
+        creatorNotes: buildStringSchema("Creator Notes"),
+      }),
+    )
+    .mutation(async ({ ctx, input }) =>
+      pipeThroughTRPCErrorHandler(async () => {
+        const [licenseJoin] = await ctx.db
+          .select()
+          .from(licenseTable)
+          .leftJoin(videoTable, eq(videoTable.id, licenseTable.video_id))
+          .where(eq(licenseTable.id, input.licenseId))
+          .limit(1)
+          .execute();
+
+        if (
+          !licenseJoin ||
+          licenseJoin.vididpro_video?.user_email !== ctx.auth.properties.email
+        ) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "You do not own this video.",
+          });
+        }
+
+        await ctx.db
+          .update(licenseTable)
+          .set({ creator_notes: input.creatorNotes })
+          .where(eq(licenseTable.id, input.licenseId))
+          .execute();
+
+        return true;
       }),
     ),
   createLicenseRequest: protectedDBProcedure
@@ -184,6 +261,7 @@ export const licenseRouter = createTRPCRouter({
             budget: input.budget,
             purpose: input.purpose,
             requester_name: input.fullName,
+            quote_price: input.quotePrice,
           })
           .returning({ id: licenseTable.id })
           .execute();

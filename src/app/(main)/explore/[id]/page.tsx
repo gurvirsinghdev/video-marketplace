@@ -66,6 +66,7 @@ const requestLicenseSchema = pipe(
     platforms: optional(string()),
     duration: optional(string()),
     budget: optional(string()),
+    quotePrice: optional(string()),
   }),
 );
 
@@ -371,6 +372,12 @@ export default function VideoListingPage({ params }: Props) {
                           {...field}
                           placeholder="TV, Online, Social Media, etc."
                         />
+                      )}
+                    />
+                    <FormField<typeof requestLicenseSchema>
+                      name="quotePrice"
+                      render={(field) => (
+                        <InputField {...field} placeholder="Proposed quote price (optional)" />
                       )}
                     />
                   </div>

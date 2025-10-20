@@ -176,7 +176,7 @@ export const videoRouter = createTRPCRouter({
       }));
     }),
   ),
-  getVideoById: protectedDBProcedure
+  getVideoById: baseProcedureWithDB
     .input(object({ id: string() }))
     .query(async ({ ctx, input }) =>
       pipeThroughTRPCErrorHandler(async () => {

@@ -39,7 +39,8 @@
         "@radix-ui/react-tooltip": "^1.2.8",
         "@stripe/connect-js": "^3.3.30",
         "@stripe/react-connect-js": "^3.3.30",
-        "@stripe/stripe-js": "^8.0.0",
+        "@stripe/react-stripe-js": "^5.2.0",
+        "@stripe/stripe-js": "^8.1.0",
         "@tailwindcss/typography": "^0.5.19",
         "@tanstack/react-query": "5.80.10",
         "@trpc/client": "11.4.2",
@@ -759,7 +760,9 @@
 
     "@stripe/react-connect-js": ["@stripe/react-connect-js@3.3.30", "", { "peerDependencies": { "@stripe/connect-js": "3.3.30", "react": "19.1.0", "react-dom": "19.1.0" } }, "sha512-Krb1XehsVhRGiYNmQVHX3Ix8N108ReqVufdTSDCpDbBJTBShU5j/l90179WM7xxON59UwLx6Kww+x1iJgkap4A=="],
 
-    "@stripe/stripe-js": ["@stripe/stripe-js@8.0.0", "", {}, "sha512-dLvD55KT1cBmrqzgYRgY42qNcw6zW4HS5oRZs0xRvHw9gBWig5yDnWNop/E+/t2JK+OZO30zsnupVBN2MqW2mg=="],
+    "@stripe/react-stripe-js": ["@stripe/react-stripe-js@5.2.0", "", { "dependencies": { "prop-types": "^15.7.2" }, "peerDependencies": { "@stripe/stripe-js": ">=8.0.0 <9.0.0", "react": ">=16.8.0 <20.0.0", "react-dom": ">=16.8.0 <20.0.0" } }, "sha512-m6CFXWjI5yikOcaP1L9xiabgkljdhu8vspoqF+BDD9mIjZIh1yEjeU0++oefqlXBd9U3QZj+C2ds4t3BDmICMg=="],
+
+    "@stripe/stripe-js": ["@stripe/stripe-js@8.1.0", "", {}, "sha512-bhhi0iSHDFRa2pPVv3WOHC6x/iGEu5AZqIiAvXsT8VOucsEre9gzgsK0jFzbzfGW2eeubF+mCdTTYwNAQCMJKg=="],
 
     "@swc/helpers": ["@swc/helpers@0.5.15", "", { "dependencies": { "tslib": "2.8.1" } }, "sha512-JQ5TuMi45Owi4/BIMAJBoSQoOJu12oOk/gADqlcUL9JEdHB8vyjUSsxqeNXnmXHjYKMi2WcYtezGEEhqUI/E2g=="],
 

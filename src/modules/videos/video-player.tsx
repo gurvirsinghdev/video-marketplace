@@ -1,7 +1,7 @@
 "use client";
 
 import "video.js/dist/video-js.css";
-import "videojs-plyr/css/videojs-plyr.css"
+import "videojs-plyr/css/videojs-plyr.css";
 
 import { useEffect, useRef } from "react";
 
@@ -17,7 +17,6 @@ interface Props {
 export default function VideoPlayer(props: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<ReturnType<typeof videojs> | null>(null);
-
 
   useEffect(
     function () {
@@ -55,10 +54,10 @@ export default function VideoPlayer(props: Props) {
   );
 
   return (
-    <div className={cn("w-full", props.className, "aspect-video")}> 
+    <div className={cn("w-full", "aspect-video")}>
       <video
         ref={videoRef}
-        className={cn("video-js vjs-theme-plyr")}
+        className={cn("video-js vjs-theme-plyr", props.className)}
       ></video>
     </div>
   );

@@ -103,13 +103,31 @@ export const userTableRelations = relations(userTable, ({ many }) => ({
   licenses: many(licenseTable),
 }));
 
-export const licenseTypeEnum = pgEnum("vididpro_license_type", ["instant", "custom"]);
+export const licenseTypeEnum = pgEnum("vididpro_license_type", [
+  "instant",
+  "custom",
+]);
+export const licensePaymentStatus = pgEnum("vididpro_license_payment_status", [
+  "paid",
+  "failed",
+  "in discussion",
+]);
 export const licenseTable = pgTable("vididpro_license", {
   id: uuid("id").notNull().defaultRandom(),
   user_email: varchar("user_email").notNull(),
-  video_id: uuid('video_id').notNull(),
-  license_key: varchar("license_key").notNull().unique(),
+  video_id: uuid("video_id").notNull(),
   license_type: licenseTypeEnum().notNull(),
+  usage: varchar("usage"),
+  region: varchar("region"),
+  platforms: varchar("platforms"),
+  duration: varchar("duration"),
+  licensed_to: varchar("licensed_to"),
+  budget: varchar("budget"),
+  purpose: varchar("purpose"),
+  requester_name: varchar("requester_name"),
+  payment_status: licensePaymentStatus().notNull().default("in discussion"),
+  stripe_session_checkout_id: varchar("stripe_session_checkout_id").unique(),
+  stripe_payment_intent_id: varchar("stripe_payment_intent_id"),
   created_at: timestamp("created_at").defaultNow().notNull(),
   updated_at: timestamp("updated_at"),
 });
@@ -148,13 +166,16 @@ export const videoTagTableRelations = relations(videoTagTable, ({ one }) => ({
   }),
 }));
 
-export const licenseTableRelations = relations(licenseTable, ({ one, many }) => ({
-  user: one(userTable, {
-    fields: [licenseTable.user_email],
-    references: [userTable.email],
+export const licenseTableRelations = relations(
+  licenseTable,
+  ({ one, many }) => ({
+    user: one(userTable, {
+      fields: [licenseTable.user_email],
+      references: [userTable.email],
+    }),
+    video: one(videoTable, {
+      fields: [licenseTable.video_id],
+      references: [videoTable.id],
+    }),
   }),
-  video: one(videoTable, { 
-    fields: [licenseTable.video_id],
-    references: [videoTable.id],
-  })
-}))
+);

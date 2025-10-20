@@ -10,26 +10,43 @@ import {
   check,
   email,
   enum_,
+  forward,
+  InferInput,
   minLength,
   object,
   optional,
+  partialCheck,
   pipe,
+  rawCheck,
   string,
 } from "valibot";
 import FormField from "@/modules/form/field";
 import React, { use, useState } from "react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useTRPC } from "@/trpc/client";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import BaseLoader from "@/modules/base/loader";
 import { buildStringSchema, formatPrice } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import InputField from "@/modules/form/input-field";
 import TextareaField from "@/modules/form/textarea-field";
 import FormActionButtons from "@/modules/form/action-buttons";
 import SelectInputField from "@/modules/form/select-input";
+import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { loadStripe } from "@stripe/stripe-js";
+import {
+  EmbeddedCheckout,
+  EmbeddedCheckoutProvider,
+} from "@stripe/react-stripe-js";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -43,37 +60,82 @@ const requestLicenseSchema = pipe(
     }),
     fullName: buildStringSchema("Full Name"),
     email: pipe(buildStringSchema("Email"), email()),
-    purpose: buildStringSchema([
-      "Purpose",
-      "Please provide a detailed purpose.",
-    ]),
+    purpose: optional(string()),
     usage: optional(string()),
     region: optional(string()),
     platforms: optional(string()),
     duration: optional(string()),
     budget: optional(string()),
   }),
-  check((input) => {
-    if (input.licenseType === "custom") {
-      return !!input.usage;
-    }
-    return true;
-  }, "Usage is required for custom license type."),
 );
 
 export default function VideoListingPage({ params }: Props) {
   const { id } = use(params);
   const trpc = useTRPC();
+  const router = useRouter();
   const getVideoByIdQuery = useQuery(
     trpc.video.getVideoById.queryOptions({ id }),
   );
   const getAuthenticatedUserQuery = useQuery(
     trpc.auth.getAuthenticatedUser.queryOptions(),
   );
+  const stripePromise = loadStripe(
+    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!,
+  );
+  const [checkoutSecret, setCheckoutSecret] = useState<string | null>(null);
+  const [openCheckout, setOpenCheckout] = useState(false);
+
+  const createLicenseRequestMutation = useMutation(
+    trpc.license.createLicenseRequest.mutationOptions({
+      onMutate() {
+        toast.loading("Requesting License...", { id: "requesting-license" });
+      },
+      onError(error) {
+        toast.error(
+          error instanceof Error ? error.message : "Failed to request license.",
+          {
+            id: "requesting-license",
+          },
+        );
+      },
+      onSuccess(data) {
+        toast.success("License Requested Successfully.", {
+          id: "requesting-license",
+        });
+        if (licenseType === "instant" && data && (data as any).client_secret) {
+          setCheckoutSecret((data as any).client_secret as string);
+          setOpenCheckout(true);
+        }
+      },
+    }),
+  );
 
   const [licenseType, setLicenseType] = useState<"custom" | "instant">(
     "instant",
   );
+
+  const isLoggedIn = !!getAuthenticatedUserQuery.data?.email;
+  const isOwner =
+    !!getAuthenticatedUserQuery.data?.email &&
+    getAuthenticatedUserQuery.data?.email ===
+      getVideoByIdQuery.data?.user_email;
+
+  const createLicenseRequest = function (
+    data: InferInput<typeof requestLicenseSchema>,
+  ) {
+    if (!isLoggedIn) {
+      toast.error("Please sign in to request a license.");
+      return;
+    }
+    if (isOwner) {
+      toast.error("You cannot request a license for your own video.");
+      return;
+    }
+    createLicenseRequestMutation.mutate({
+      ...data,
+      videoId: id,
+    });
+  };
 
   if (getVideoByIdQuery.isLoading) {
     return (
@@ -143,7 +205,22 @@ export default function VideoListingPage({ params }: Props) {
 
         {/* Request License Form */}
         <div className="space-y-6 lg:col-span-2">
-          {!getAuthenticatedUserQuery.data?.email && (
+          {checkoutSecret && (
+            <Dialog open={openCheckout} onOpenChange={setOpenCheckout}>
+              <DialogContent className="max-h-[80vh] w-full max-w-3xl overflow-auto">
+                <DialogHeader>
+                  <DialogTitle>Complete your payment</DialogTitle>
+                </DialogHeader>
+                <EmbeddedCheckoutProvider
+                  options={{ clientSecret: checkoutSecret }}
+                  stripe={stripePromise}
+                >
+                  <EmbeddedCheckout />
+                </EmbeddedCheckoutProvider>
+              </DialogContent>
+            </Dialog>
+          )}
+          {!isLoggedIn && (
             <Alert variant={"destructive"}>
               <AlertCircleIcon className="h-4 w-4" />
               <AlertDescription className="inline">
@@ -152,6 +229,14 @@ export default function VideoListingPage({ params }: Props) {
                   sign in
                 </Link>{" "}
                 to continue.
+              </AlertDescription>
+            </Alert>
+          )}
+          {isOwner && (
+            <Alert variant={"destructive"}>
+              <AlertCircleIcon className="h-4 w-4" />
+              <AlertDescription className="inline">
+                You cannot request a license for your own video.
               </AlertDescription>
             </Alert>
           )}
@@ -172,7 +257,13 @@ export default function VideoListingPage({ params }: Props) {
             <CardContent className="py-0">
               <BaseForm
                 schema={requestLicenseSchema}
-                handlers={{ submitForm: console.log }}
+                defaultValues={{
+                  licenseType: "instant",
+                  fullName: getAuthenticatedUserQuery.data?.name ?? "",
+                  email: getAuthenticatedUserQuery.data?.email ?? "",
+                  purpose: "",
+                }}
+                handlers={{ submitForm: createLicenseRequest }}
               >
                 <FormField<typeof requestLicenseSchema>
                   name="licenseType"
@@ -227,7 +318,10 @@ export default function VideoListingPage({ params }: Props) {
                     <FormField<typeof requestLicenseSchema>
                       name="email"
                       render={(field) => (
-                        <InputField placeholder="john@vididpro.com" />
+                        <InputField
+                          {...field}
+                          placeholder="john@vididpro.com"
+                        />
                       )}
                     />
                   </div>

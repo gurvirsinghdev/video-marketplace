@@ -162,6 +162,34 @@
       "when": 1760807711549,
       "tag": "0022_curious_the_enforcers",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1760859005969,
+      "tag": "0023_true_blacklash",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1760859228333,
+      "tag": "0024_even_the_leader",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1760887334515,
+      "tag": "0025_even_ares",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1760944335229,
+      "tag": "0026_futuristic_slapstick",
+      "breakpoints": true
     }
   ]
 }

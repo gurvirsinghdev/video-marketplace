@@ -4,6 +4,7 @@ import { createTRPCRouter } from "../init";
 import { tagsRouter } from "./tags.router";
 import { userRouter } from "./user.router";
 import { videoRouter } from "./video.router";
+import { licenseRouter } from "./license.router";
 
 export async function pipeThroughTRPCErrorHandler<
   // eslint-disable-next-line
@@ -29,6 +30,7 @@ export const appRouter = createTRPCRouter({
   user: userRouter,
   video: videoRouter,
   tags: tagsRouter,
+  license: licenseRouter,
 });
 
 export type AppRouter = typeof appRouter;

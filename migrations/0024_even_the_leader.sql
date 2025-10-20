@@ -1,0 +1,1 @@
+ALTER TABLE "vididpro_license" ADD COLUMN "licensed_to" varchar;

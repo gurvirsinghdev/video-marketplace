@@ -12,17 +12,14 @@ import BaseLoader from "../base/loader";
 import DashboardDialogHeader from "../dashboard/dialog-header";
 import PaginatedList from "../tables/paginated-list";
 import VideoItem from "./video-item";
-import importDynamic from "next/dynamic";
 import { inferProcedureOutput } from "@trpc/server";
 import { useTRPC } from "@/trpc/client";
-
-const VideoPlayer = importDynamic(
-  async () => (await import("./video-player")).default,
-  {
-    ssr: false,
-  },
-);
-
+import VideoPlayer from "./video-player";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 export const dynamic = "force-dynamic";
 
 export default function VideosPageListing() {
@@ -87,12 +84,20 @@ export default function VideosPageListing() {
             items={listMyVideosPaginatedQuery.data.records}
             loading={listMyVideosPaginatedQuery.isLoading}
             renderItem={(video) => (
-              <div onClick={() => setSelectedVideo(video)}>
-                <VideoItem
-                  author={authenticatedUser.data.name!}
-                  video={video}
-                />
-              </div>
+              <Tooltip key={video.id}>
+                <TooltipTrigger
+                  className="w-full text-left"
+                  onClick={() => setSelectedVideo(video)}
+                >
+                  <VideoItem
+                    author={authenticatedUser.data.name!}
+                    video={video}
+                  />
+                </TooltipTrigger>
+                <TooltipContent>
+                  Click here to view video details
+                </TooltipContent>
+              </Tooltip>
             )}
           />
         </CardContent>
@@ -116,7 +121,7 @@ export default function VideosPageListing() {
                   <VideoPlayer
                     thumbnailUrl={selectedVideo.thumbnail_key}
                     playlistUrl={selectedVideo.m3u8_key}
-                    className="h-auto w-full"
+                    className="rounded-md!"
                   />
                 ) : (
                   <div className="bg-card relative aspect-video h-full w-full animate-pulse rounded-lg">

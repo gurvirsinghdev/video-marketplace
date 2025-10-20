@@ -84,7 +84,7 @@ export const licenseRouter = createTRPCRouter({
     .input(
       object({
         licenseId: buildStringSchema("License Id"),
-        settlePrice: buildStringSchema("Settle Price"),
+        settlePrice: string("Settle Price"),
       }),
     )
     .mutation(async ({ ctx, input }) =>
@@ -108,13 +108,14 @@ export const licenseRouter = createTRPCRouter({
           });
         }
 
-        await ctx.db
+        const [{ price }] = await ctx.db
           .update(licenseTable)
           .set({ settle_price: input.settlePrice })
           .where(eq(licenseTable.id, input.licenseId))
+          .returning({ price: licenseTable.settle_price })
           .execute();
 
-        return true;
+        return { settle_price: price };
       }),
     ),
   setLicenseCreatorNotes: protectedDBProcedure
@@ -318,6 +319,4 @@ export const licenseRouter = createTRPCRouter({
           };
         }),
     ),
-
-  // Removed old submitCustomLicenseRequest (replaced by createLicenseRequest)
 });

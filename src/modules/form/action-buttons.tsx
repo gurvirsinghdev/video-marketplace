@@ -7,6 +7,8 @@ import { useFormContext } from "react-hook-form";
 
 interface Props {
   buttonLabel: string;
+  onClose?: () => void;
+  close?: boolean;
 }
 
 export default function FormActionButtons(props: Props) {
@@ -18,10 +20,10 @@ export default function FormActionButtons(props: Props) {
       <FormButton
         disabled={isLoading}
         type="button"
-        onClick={reset}
+        onClick={props.close ? props.onClose : reset}
         variant={"destructive"}
       >
-        Reset
+        {props.close ? "Close" : "Reset"}
       </FormButton>
       <FormButton disabled={isLoading} variant={"outline"}>
         {isLoading ? <BaseLoader /> : props.buttonLabel}

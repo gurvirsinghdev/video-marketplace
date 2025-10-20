@@ -22,17 +22,26 @@ import DashboardPageHeader from "@/modules/dashboard/page-header";
 import PaginatedList from "@/modules/tables/paginated-list";
 import { VideoThumbnail } from "@/modules/videos/video-thumbnail";
 import { useTRPC } from "@/trpc/client";
-import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
 import moment from "moment";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import BaseForm from "@/modules/form/base-form";
+import { object } from "valibot";
+import { buildPriceSchema, buildStringSchema } from "@/lib/utils";
+import InputField from "@/modules/form/input-field";
+import TextareaField from "@/modules/form/textarea-field";
+import FormField from "@/modules/form/field";
+import FormActionButtons from "@/modules/form/action-buttons";
 
 export default function DashboardLicenseRequestsView() {
   const trpc = useTRPC();
+  const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const router = useRouter();
   const page = Number(searchParams.get("page")) || 1;
@@ -48,8 +57,10 @@ export default function DashboardLicenseRequestsView() {
   >(null);
 
   // Local inputs for settle price and creator notes
-  const [settlePriceInput, setSettlePriceInput] = useState<string>("");
-  const [creatorNotesInput, setCreatorNotesInput] = useState<string>("");
+  const [, setSettlePriceInput] = useState<string>("");
+  const [, setCreatorNotesInput] = useState<string>("");
+  const [openSettleDialog, setOpenSettleDialog] = useState<boolean>(false);
+  const [openNotesDialog, setOpenNotesDialog] = useState<boolean>(false);
 
   useEffect(() => {
     if (selected?.vididpro_license) {
@@ -77,6 +88,9 @@ export default function DashboardLicenseRequestsView() {
         toast.success("Settle price set successfully.", {
           id: "settle-price",
         });
+        setOpenSettleDialog(false);
+        // Invalidate the list so it refetches
+        listMyLicensesRequestPagniated.refetch();
       },
     }),
   );
@@ -96,6 +110,8 @@ export default function DashboardLicenseRequestsView() {
         toast.success("Creator notes set successfully.", {
           id: "creator-notes",
         });
+        setOpenNotesDialog(false);
+        listMyLicensesRequestPagniated.refetch();
       },
     }),
   );
@@ -366,8 +382,8 @@ export default function DashboardLicenseRequestsView() {
                         <div className="truncate text-sm font-medium">
                           {selected.vididpro_video.title}
                         </div>
-                        <div className="text-muted-foreground mt-1 font-mono text-xs">
-                          {/* {formatPrice(selected.vididpro_video.price)} */}
+                        <div className="text-muted-foreground mt-1 text-xs">
+                          {formatPrice(selected.vididpro_video.price!)}
                         </div>
                       </div>
                     </div>
@@ -384,55 +400,143 @@ export default function DashboardLicenseRequestsView() {
               >
                 Close
               </Button>
-              {selected?.vididpro_license ? (
-                <div className="grid w-full grid-cols-1 gap-3 sm:w-auto sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium">Settle Price</div>
-                    <Input
-                      value={settlePriceInput}
-                      onChange={(e) => setSettlePriceInput(e.target.value)}
-                      placeholder="Enter final settle price"
-                    />
-                    <Button
-                      className="w-full"
-                      onClick={async () => {
-                        if (!selected?.vididpro_license?.id) return;
-                        await setSettlePriceMutation.mutateAsync({
-                          licenseId: selected.vididpro_license.id,
-                          settlePrice: settlePriceInput,
-                        });
-                        // refresh data
-                        listMyLicensesRequestPagniated.refetch();
-                      }}
-                    >
-                      Save
-                    </Button>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium">Creator Notes</div>
-                    <Textarea
-                      value={creatorNotesInput}
-                      onChange={(e) => setCreatorNotesInput(e.target.value)}
-                      placeholder="Add private notes for this license"
-                      rows={3}
-                    />
-                    <Button
-                      className="w-full"
-                      onClick={async () => {
-                        if (!selected?.vididpro_license?.id) return;
-                        await setCreatorNotesMutation.mutateAsync({
-                          licenseId: selected.vididpro_license.id,
-                          creatorNotes: creatorNotesInput,
-                        });
-                        listMyLicensesRequestPagniated.refetch();
-                      }}
-                    >
-                      Save
-                    </Button>
-                  </div>
+              {selected?.vididpro_license &&
+              selected.vididpro_license.license_type === "custom" ? (
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                  <Button
+                    variant="default"
+                    onClick={() => {
+                      // exclusive open
+                      setOpenNotesDialog(false);
+                      setOpenSettleDialog(true);
+                    }}
+                  >
+                    {selected.vididpro_license.settle_price
+                      ? "Update Settle Price"
+                      : "Set Settle Price"}
+                  </Button>
+                  {/* <Button
+                    variant="secondary"
+                    onClick={() => {
+                      setOpenSettleDialog(false);
+                      setOpenNotesDialog(true);
+                    }}
+                  >
+                    Creator Notes
+                  </Button> */}
                 </div>
               ) : null}
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        {/* Settle Price Dialog */}
+        <Dialog
+          open={openSettleDialog}
+          onOpenChange={(v) => {
+            setOpenSettleDialog(v);
+            if (v) setOpenNotesDialog(false);
+          }}
+        >
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DashboardDialogHeader
+                title="Settle Price"
+                brief="Enter the final settled price for this license."
+              />
+            </DialogHeader>
+            <BaseForm
+              schema={object({ settlePrice: buildPriceSchema() })}
+              defaultValues={{
+                settlePrice: selected?.vididpro_license?.settle_price || "",
+              }}
+              handlers={{
+                submitForm: async (data) => {
+                  if (!selected?.vididpro_license?.id) return;
+                  await setSettlePriceMutation.mutateAsync({
+                    licenseId: selected.vididpro_license.id,
+                    settlePrice: data.settlePrice,
+                  });
+                },
+              }}
+            >
+              <FormField
+                name="settlePrice"
+                render={(field) => (
+                  <InputField
+                    {...field}
+                    defaultValue={selected?.vididpro_license.settle_price || ""}
+                    placeholder="Enter final settle price"
+                  />
+                )}
+              />
+
+              <FormActionButtons
+                buttonLabel="Save"
+                close
+                onClose={() => {
+                  setOpen(false);
+                  setSelected(null);
+                  setOpenSettleDialog(false);
+                }}
+              />
+            </BaseForm>
+          </DialogContent>
+        </Dialog>
+
+        {/* Creator Notes Dialog */}
+        <Dialog
+          open={openNotesDialog}
+          onOpenChange={(v) => {
+            setOpenNotesDialog(v);
+            if (v) setOpenSettleDialog(false);
+          }}
+        >
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DashboardDialogHeader
+                title="Creator Notes"
+                brief="Add private notes for this license."
+              />
+            </DialogHeader>
+            <BaseForm
+              schema={object({
+                creatorNotes: buildStringSchema([
+                  "Creator Notes",
+                  "Please enter at least 3 characters",
+                ]),
+              })}
+              defaultValues={{
+                creatorNotes: selected?.vididpro_license?.creator_notes || "",
+              }}
+              handlers={{
+                submitForm: async (data) => {
+                  if (!selected?.vididpro_license?.id) return;
+                  await setCreatorNotesMutation.mutateAsync({
+                    licenseId: selected.vididpro_license.id,
+                    creatorNotes: data.creatorNotes,
+                  });
+                },
+              }}
+            >
+              <FormField
+                name="creatorNotes"
+                render={(field) => (
+                  <TextareaField
+                    {...field}
+                    placeholder="Add private notes for this license"
+                  />
+                )}
+              />
+              <FormActionButtons
+                buttonLabel="Save"
+                close
+                onClose={() => {
+                  setOpen(false);
+                  setSelected(null);
+                  setOpenNotesDialog(false);
+                }}
+              />
+            </BaseForm>
           </DialogContent>
         </Dialog>
       </Suspense>

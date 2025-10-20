@@ -277,6 +277,45 @@ export const userRouter = createTRPCRouter({
       }),
   ),
 
+  getStripeDashboardLoginLink: protectedDBProcedure.mutation(
+    async ({ ctx }) =>
+      await pipeThroughTRPCErrorHandler(async () => {
+        const integration = await getStripeIntegrationByEmail(
+          ctx.db,
+          ctx.auth.properties.email,
+        );
+
+        if (!integration) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Stripe is not enabled for this account.",
+          });
+        }
+
+        if (!integration.active) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message:
+              "Your Stripe account is not fully onboarded yet. Please complete onboarding from Settings.",
+          });
+        }
+
+        const metadata = integration.metadata as StripeIntegrationMetadata;
+        if (!metadata?.account_id) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Missing Stripe account ID. Try re-linking Stripe.",
+          });
+        }
+
+        const loginLink = await stripe.accounts.createLoginLink(
+          metadata.account_id,
+        );
+
+        return loginLink.url;
+      }),
+  ),
+
   getLinkedServices: protectedDBProcedure.query(
     async ({ ctx }) =>
       await pipeThroughTRPCErrorHandler(async () => {

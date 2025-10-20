@@ -1,12 +1,12 @@
-import { email, enum_, object, optional, pipe, string } from "valibot";
+import { email, enum_, number, object, optional, pipe, string } from "valibot";
 import { createTRPCRouter, protectedDBProcedure } from "../init";
 import { pipeThroughTRPCErrorHandler } from "./_app";
 import { licenseTable, videoTable } from "@/db/schemas/app.schema";
 import { buildStringSchema } from "@/lib/utils";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
+import { getCloudfrontUrl } from "@/lib/cloudfront";
 import { TRPCError } from "@trpc/server";
 import Stripe from "stripe";
-import { Resource } from "sst";
 import { headers } from "next/headers";
 import { getStripeIntegrationByEmail } from "@/lib/server.utils";
 
@@ -14,6 +14,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-09-30.clover",
 });
 
+const pageSize = 5;
 const createLicenseRequestSchema = object({
   licenseType: enum_({
     instant: "instant",
@@ -32,6 +33,49 @@ const createLicenseRequestSchema = object({
   ),
 });
 export const licenseRouter = createTRPCRouter({
+  listMyLicensesRequestPagniated: protectedDBProcedure
+    .input(object({ page: number() }))
+    .query(async ({ input, ctx }) =>
+      pipeThroughTRPCErrorHandler(async () => {
+        const [{ count }] = await ctx.db
+          .select({ count: sql<number>`count(*)` })
+          .from(licenseTable)
+          .leftJoin(
+            videoTable,
+            eq(videoTable.user_email, ctx.auth.properties.email),
+          )
+          .where(eq(licenseTable.video_id, videoTable.id))
+          .execute();
+
+        const offset = (input.page - 1) * pageSize;
+        const licenses = await ctx.db
+          .select()
+          .from(licenseTable)
+          .leftJoin(
+            videoTable,
+            eq(videoTable.user_email, ctx.auth.properties.email),
+          )
+          .where(eq(licenseTable.video_id, videoTable.id))
+          .offset(offset)
+          .limit(pageSize)
+          .execute();
+
+        return {
+          pageSize,
+          pages: Math.ceil(count / pageSize),
+          requests: licenses.map((license) => ({
+            ...license,
+            vididpro_video: {
+              ...license.vididpro_video,
+              thumbnail_key: getCloudfrontUrl(
+                license.vididpro_video?.thumbnail_key,
+              ),
+              m3u8_key: getCloudfrontUrl(license.vididpro_video?.m3u8_key),
+            },
+          })),
+        };
+      }),
+    ),
   createLicenseRequest: protectedDBProcedure
     .input(createLicenseRequestSchema)
     .mutation(async ({ ctx, input }) =>

@@ -24,12 +24,13 @@ import { VideoThumbnail } from "@/modules/videos/video-thumbnail";
 import { useTRPC } from "@/trpc/client";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import moment from "moment";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
 export default function DashboardLicenseRequestsView() {
   const trpc = useTRPC();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const page = Number(searchParams.get("page")) || 1;
   const listMyLicensesRequestPagniated = useSuspenseQuery(
     trpc.license.listMyLicensesRequestPagniated.queryOptions({
@@ -57,7 +58,11 @@ export default function DashboardLicenseRequestsView() {
           <CardContent className="px-0">
             <PaginatedList
               currentPage={page}
-              gotoPage={(page) => console.log(page)}
+              gotoPage={(nextPage) => {
+                const params = new URLSearchParams(searchParams.toString());
+                params.set("page", String(nextPage));
+                router.push(`/dashboard/licenses?${params.toString()}`);
+              }}
               emptyText="No license requests to display."
               pageSize={listMyLicensesRequestPagniated.data.pageSize}
               totalPages={listMyLicensesRequestPagniated.data.pages}
